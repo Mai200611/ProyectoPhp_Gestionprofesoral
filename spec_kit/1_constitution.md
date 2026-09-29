@@ -7,7 +7,7 @@
 > El proyecto se construye **por versiones** (desarrollo incremental guiado por
 > especificaciones): ver el [mapa de versiones](versiones/0_mapa_versiones.md).
 > Cada artículo aplica desde la versión que introduce su alcance — por ejemplo,
-> en la v1 la API solo conoce `producto` y un motor, así que los artículos
+> en la v1 la API solo conoce `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red` con un motor, así que los   artículos
 > sobre los otros motores son la META, no el estado actual.
 >
 > **El front no está entre esas metas: existe desde la v1.** Por qué, en el
@@ -24,6 +24,7 @@ arquitectura** a estudiantes universitarios. Ante cualquier disyuntiva entre
 - Todo el código, comentarios, mensajes y documentación se escriben en **español**.
 - Cada archivo abre con un comentario que explica su papel en la arquitectura.
 - Se prefiere código explícito y repetitivo-pero-legible sobre metaprogramación compacta.
+- Cada que se termine un paso, esperas la directiva de un "Siguiente" para continuar con el código
 
 ### Artículo 1.1 — Una versión incluye SU FRONT
 
@@ -94,7 +95,7 @@ contenedores.
 
 - El motor activo se elige con **configuración**, nunca con cambios de código.
 - Los tres motores contienen la **misma base de datos** (`bdgestion_*_local`):
-  mismas 12 tablas, mismos datos, mismos triggers y procedimientos.
+  mismas 5 tablas, mismos datos, mismos triggers y procedimientos.
 - Todo acceso a datos pasa por interfaces + un punto único de ensamblaje
   (inversión de dependencias — la D de SOLID).
 
@@ -134,8 +135,8 @@ imagen (`--build`) solo es necesario si cambia el `Dockerfile`.
 
 ## Artículo 10 — La API es específica, nunca genérica
 
-Cada recurso tiene **su propia ruta escrita a mano**: `/api/producto`,
-`/api/factura`, `/api/cliente`. Nunca una ruta con el nombre de la tabla como
+Cada recurso tiene **su propia ruta escrita a mano**: `/api/area_conocimiento`, `/api/termino_clave`, `/api/linea_investigacion`,
+`/api/programa`, `/api/red`. Nunca una ruta con el nombre de la tabla como
 parámetro (`/api/{tabla}`) que sirva para todas.
 
 **El porqué, que es lo que hay que entender —y con una excepción honesta.**
@@ -144,14 +145,19 @@ Una API genérica es **buena para prototipar**: se escribe una vez y de una vez
 sirve para las doce tablas. Ahí gana de verdad, y decir lo contrario sería
 falso. Lo que pasa es que ese ahorro se cobra después:
 
-| | Genérica `/api/{tabla}` | Específica `/api/producto` |
-|---|---|---|
-| Escribirla | Una vez, y sirve para todo | Una vez **por recurso** |
-| Documentación | Dice «tabla: texto». No dice cuáles ni qué campos lleva cada una | Dice los campos de producto, con su tipo |
-| Un campo que solo tiene una tabla | No cabe: obligaría a un `if` adentro de lo genérico | Se agrega en su ruta y no afecta a nadie |
-| Una regla que solo aplica a una tabla | Igual: el `if` crece con cada excepción | Vive donde corresponde |
-| Un cambio en un recurso | Toca el código de TODOS | Toca ese archivo |
-| Quien la consume | Tiene que preguntar qué valores acepta el parámetro | Lo lee en la ruta |
+| | Genérica `/api/{tabla}` | Específica `/api/area_conocimiento` | Específica `/api/termino_clave` | Específica `/api/linea_investigacion` | Específica `/api/programa` | Específica `/api/red` |
+|---|---|---|---|---|---|---|
+| **Escribirla** | Una vez, y sirve para todo | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso |
+| **Documentación** | Dice «tabla: texto». No dice cuáles ni qué campos lleva cada una | Documenta `id`, `gran_area`, `area`, `disciplina` | Documenta `termino`, `termino_ingles` | Documenta `id`, `nombre`, `descripcion` | Documenta `id`, `nombre`, `tipo`, `nivel`, fechas, cohortes, graduados, ciudad y facultad | Documenta `idr`, `nombre`, `url`, `pais` |
+| **Un campo que solo tiene una tabla** | No cabe: obligaría a un `if` adentro de lo genérico | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás |
+| **Una regla que solo aplica a una tabla** | Igual: el `if` crece con cada excepción | Vive en la lógica de `area_conocimiento` | Vive en la lógica de `termino_clave` | Vive en la lógica de `linea_investigacion` | Vive en la lógica de `programa` | Vive en la lógica de `red` |
+| **Un cambio en un recurso** | Toca el código de TODOS | Toca el código de `area_conocimiento` | Toca el código de `termino_clave` | Toca el código de `linea_investigacion` | Toca el código de `programa` | Toca el código de `red` |
+| **Quien la consume** | Tiene que preguntar qué valores acepta el parámetro | Lee `/api/area_conocimiento` directamente | Lee `/api/termino_clave` directamente | Lee `/api/linea_investigacion` directamente | Lee `/api/programa` directamente | Lee `/api/red` directamente |
+| **Identificador** | Depende de la tabla y debe descubrirlo dinámicamente | `id` | `termino` | `id` | `id` | `idr` |
+| **Tipo de recurso** | Desconocido hasta consultar la tabla | Catálogo jerárquico del conocimiento | Catálogo de términos y traducciones | Catálogo de líneas de investigación | Catálogo de programas académicos | Catálogo de redes académicas |
+| **Datos principales** | Desconocidos | `gran_area`, `area`, `disciplina` | `termino`, `termino_ingles` | `nombre`, `descripcion` | `nombre`, `tipo`, `nivel`, fechas, cohortes, graduados, ciudad, facultad | `nombre`, `url`, `pais` |
+| **Claves foráneas en v1** | No puede determinarse de forma explícita | Ninguna | Ninguna | Ninguna | Ninguna | Ninguna |
+| **Cantidad inicial** | Depende de la tabla | 218 registros | — | — | 191 registros | — |
 
 En corto: **lo genérico es barato de escribir y caro de vivir; lo específico
 es caro de escribir una vez y barato de vivir.** Un prototipo se tira a los
