@@ -153,8 +153,8 @@ sencilla resultó ser la más fácil de probar.
 ## D11 — `cliente_api.php` trabaja con arrays, no con las clases de la API
 
 **Alternativa descartada, y hay que nombrarla porque es tentadora:**
-`require_once __DIR__ . '/../api_facturas/modelos/Producto.php';` para usar
-en el front la clase `Producto` que ya existe. **Funcionaría.**
+`require_once __DIR__ . '/../api_gestion/modelos/Programa.php';` para usar
+en el front la clase `Programa` que ya existe. **Funcionaría.**
 **Decisión:** el front trabaja con los arrays que `json_decode` devuelve.
 **Por qué:** ese `require` los volvería un solo programa repartido en dos
 carpetas. Renombrar un método adentro de la API rompería la pantalla **sin

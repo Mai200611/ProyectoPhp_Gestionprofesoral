@@ -79,15 +79,9 @@ Datos de ejemplo: **8 programas** (10101, Administración de Empresas, Programa 
 | `pais` | VARCHAR(45) | NOT NULL | Pais de las redes académicas |
 
 **Notas para la API:**
-
-- Los valores no-negativos de stock y valorunitario los garantiza el
-  **la validación del controlador en la API** (la frontera de entrada, con 422).
-- El driver mysql de PDO entrega `DECIMAL` como **string** — el repositorio
-  castea al serializar (`stock → int`, `valorunitario → float`).
-- La tabla tiene una relación entrante
-  (`productosporfactura.fkcodproducto`): eliminar un producto que aparezca en
-  una factura fallará por FK — la API mostrará el 500 con el error del motor
-  (integridad referencial en acción).
+- Los valores requeridos (como `id`, `nombre`, `tipo`, `nivel`, etc.) y las longitudes máximas de texto los garantiza la validación del controlador en la API (la frontera de entrada, con código HTTP 422).
+- El driver mysql de PDO entrega valores numéricos como `string` o según el tipo de columna — el repositorio realiza los casts explícitos al construir los objetos del modelo (`id → int`, `facultad → int`).
+- El borrado de programas en la base de datos es LÓGICO (`activo = FALSE`): las lecturas y actualizaciones en el repositorio filtran siempre por `activo = TRUE` para no listar programas retirados ni permitir operaciones sobre ellos.
 
 ## 3. Montar la BD para la v1
 
