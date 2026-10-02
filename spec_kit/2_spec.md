@@ -2,19 +2,17 @@
 
 > **Versión 1** del desarrollo incremental ([mapa de versiones](../0_mapa_versiones.md)).
 > Rige la constitución del proyecto: [../../1_constitution.md](../../1_constitution.md).
-> En v1 el sistema completo ES esto: **una tabla, un motor — y su pantalla.**
+> En v1 el sistema completo ES esto: **5 tablas, un motor — y su pantalla.**
 > La API y el front se construyen **a la vez** (Artículo 1.1 de la
-> constitución): la versión no está cerrada si la API responde y la pantalla
-> no. (La BD `bdfacturas` sí se crea COMPLETA desde el inicio — es
-> infraestructura dada, ver [5_data_model.md](5_data_model.md); lo que crece
-> por versiones es el código.)
+> constitución)
+> 
 >
 > | Documento de esta versión | Contenido |
 > |---|---|
 > | **2_spec.md** (este) | QUÉ construir en v1 y sus criterios de aceptación |
 > | [3_plan.md](3_plan.md) | CÓMO: stack, estructura y diseño de las capas |
 > | [4_research.md](4_research.md) | Decisiones y alternativas *(lectura opcional)* |
-> | [5_data_model.md](5_data_model.md) | La BD completa (dada) y la tabla `producto` |
+> | [5_data_model.md](5_data_model.md) | La BD completa (dada) y las 5 tablas ya dadas |
 > | [6_contracts.md](6_contracts.md) | Los 7 endpoints y las 5 pantallas, con formatos exactos |
 > | [7_quickstart.md](7_quickstart.md) | Arranque y smoke test |
 > | [8_tasks.md](8_tasks.md) | Orden de construcción por fases verificables |
@@ -24,8 +22,8 @@
 ## 1. Propósito de la v1
 
 Construir la **primera rebanada vertical (corte vertical)** del sistema de
-facturación en **PHP puro**: el CRUD completo de **una sola entidad
-(`producto`)** contra **un solo motor (MariaDB)** — con la **arquitectura en
+facturación en **PHP puro**: el CRUD completo de **las 5 entidades
+(`area_conocimiento`,`termino_clave`,`linea_investigacion`,`programa`y `red`)** contra **un solo motor (MariaDB)** — con la **arquitectura en
 capas completa desde el primer día** (controlador → servicio → repositorio,
 comunicados por **interfaces nativas de PHP**) **y con la pantalla desde la
 que se usa**.
@@ -42,13 +40,13 @@ la base de datos ni queriendo.
 > Como una rebanada de pastel: un solo corte, pero con todas las capas.
 >
 > ```
-> ┌─────────────────────────── el sistema completo ───────────────────────────┐
-> │  PANTALLA    │ producto █ │ persona    │ factura    │ ...las demás (v2)   │
-> │  CONTROLADOR │ producto █ │ persona    │ factura    │ ...                 │
-> │  SERVICIO    │ producto █ │ persona    │ factura    │ ...                 │
-> │  REPOSITORIO │ producto █ │ persona    │ factura    │ ...                 │
-> │  BD          │ producto █ │ persona    │ factura    │ ...                 │
-> └──────────────┴─────▲──────┴────────────┴────────────┴─────────────────────┘
+> ┌─────────────────────────── el sistema completo ──────────────────────────────────────────────────────┐
+> │  PANTALLA    │ area_conocimiento █ │ termino_clave   │ linea_investigacion    │ Programa  | Red |...las demás (v2)   │
+> │  CONTROLADOR │ area_conocimiento █ │ termino_clave   │ linea_investigacion    │ Programa  | Red |...                 │
+> │  SERVICIO    │ area_conocimiento █ │ termino_clave   │ linea_investigacion    │ Programa  | Red |...                 │
+> │  REPOSITORIO │ area_conocimiento █ │ termino_clave   │ linea_investigacion    │ Programa  | Red |...                 │
+> │  BD          │ area_conocimiento █ │ termino_clave   │ linea_investigacion    │ Programa  | Red |...                 │
+> └──────────────┴─────▲──────┴────────────┴────────────┴────────────────────────────────────────────────┘
 >                      └── la v1 ES esta rebanada: del navegador a la tabla
 > ```
 >
@@ -56,7 +54,7 @@ la base de datos ni queriendo.
 > el usuario, y lo que se valida es media arquitectura.
 >
 > Ventaja: algo funciona **desde la v1** y la arquitectura queda validada —
-> si las capas encajan para `producto`, las siguientes rebanadas (v2) caen en
+> si las capas encajan para `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa`,`red` las siguientes rebanadas (v2) caen en
 > surcos ya hechos.
 
 La v1 es pequeña a propósito: su valor no está en la funcionalidad sino en
@@ -66,221 +64,808 @@ front**— sobre el que las versiones siguientes agregan tablas (v2) y motores
 
 ## 2. Alcance
 
-**Incluye:**
-- CRUD de `producto`: listar, obtener por código, crear, reemplazar,
-  actualizar parcialmente, eliminar.
-- **Modelo clásico**: la clase `Producto` con las 4 propiedades **privadas**,
-  getters y setters (encapsulamiento) y `toArray()` para el JSON — el dato
-  viaja como objeto, no como array anónimo.
-- **Validación en el controlador** (la frontera HTTP), con un método por
-  verbo: PHP puro no trae validación integrada — se construye a mano, y eso
-  es contenido del curso.
-- Capas con interfaces: `IRepositorioProducto` (interface PHP) implementada
-  por `RepositorioProductoMariaDB`; el servicio depende de la interfaz.
-- Configuración por variables de entorno (DSN de PDO, usuario, clave).
-- **Un solo comando** (Artículo 4 de la constitución): `docker-compose.yml`
-  mínimo — MariaDB + la API + **el front**, cada uno con su `Dockerfile` — de
-  modo que `docker compose up -d --build` deja todo funcionando.
-- Endpoint `/` de diagnóstico.
-- **El front `front_php`** (puerto 8020), con su propio front controller y sus
-  pantallas de `producto`: inicio, listado, agregar y editar. Habla con la API
-  por HTTP (cURL) y **no abre ninguna conexión a la base**.
+## 2. Alcance — `area_conocimiento`
 
-**No incluye (y es deliberado — ver [mapa de versiones](../0_mapa_versiones.md)):**
-- Endpoints **ni pantallas** para otras entidades (v2) — las otras 11 tablas
-  EXISTEN en la BD, pero el código de la v1 solo puede nombrar `producto`.
-- Lógica de aplicación en JavaScript: las pantallas son HTML servido por
-  PHP y formularios corrientes. Hay dos usos de JS y ninguno hace falta para
-  que el sistema funcione: el `confirm()` antes de eliminar y el guion de
-  Bootstrap que cierra los avisos con la «x». Quítelos y todo sigue andando.
-- Un framework de front (React, Vue, Blazor): quien llama a la API es **el
-  proceso del front**, no el navegador. Esa es la arquitectura que se está
-  enseñando.
-- Autenticación de usuarios en el front: cualquiera que abra el puerto 8020
-  ve las pantallas. Es un entorno de curso, y el Artículo 9 lo dice.
-- Otros motores y la fábrica de repositorios (v3, v4).
-- Frameworks, Composer y librerías externas (constitución, Artículo 2).
-- Autenticación y uso del trigger/SPs de facturación (los aprovechará la v2).
+****Incluye:****
+
+* CRUD de `area_conocimiento`: listar, obtener por `id`, crear, reemplazar, actualizar parcialmente y eliminar.
+* ****Modelo clásico****: la clase `AreaConocimiento` representa cada registro mediante las propiedades correspondientes a `id`, `gran_area`, `area` y `disciplina`, utilizando propiedades ****privadas****, getters, setters y `toArray()` para construir la respuesta JSON.
+* ****Identificador propio****: `id` identifica de manera única cada registro de la tabla.
+* ****Validación en el controlador****: se valida en la frontera HTTP que los datos recibidos correspondan a la estructura propia de `area_conocimiento`.
+* ****Validación de los campos****: `gran_area`, `area` y `disciplina` deben corresponder a los datos esperados por el catálogo.
+* Capas con interfaces: `IARepositorioAreaConocimiento` como contrato PHP, implementada por el repositorio concreto del motor de BD utilizado en la versión.
+* Configuración de conexión mediante variables de entorno y PDO con *prepared statements*.
+* Endpoint `/api/area_conocimiento` específico para este recurso.
+* Endpoint `GET /api/area_conocimiento/{id}` para consultar un registro por su identificador.
+* El recurso debe responder exclusivamente **JSON**; no genera HTML.
+* ****Front `front_php`**** con las pantallas correspondientes a `area_conocimiento`: inicio, listado, agregar y editar.
+* El front se comunica con la API mediante HTTP y ****no abre ninguna conexión a la base de datos****.
+* Carga inicial del catálogo de **218 registros** provenientes de los datos definidos para la v1.
+* Los campos `gran_area`, `area` y `disciplina` se manejan como información propia del registro y no como claves foráneas en esta versión.
+
+****No incluye (y es deliberado — ver [mapa de versiones](../0_mapa_versiones.md)):****
+
+* Relaciones mediante claves foráneas con otras tablas.
+* Endpoints ni pantallas para entidades diferentes de `area_conocimiento` dentro de este recurso.
+* Autenticación de usuarios en el front.
+* Lógica de aplicación en JavaScript.
+* Frameworks de front como React, Vue o Blazor.
+* Frameworks PHP, Composer o librerías externas.
+* Cambios sobre la estructura jerárquica mediante otras tablas relacionadas.
+* Funcionalidades pertenecientes a versiones posteriores.
+
+## 2.1 Alcance — `termino_clave`
+
+****Incluye:****
+
+* CRUD de `termino_clave`: listar, obtener por `termino`, crear, reemplazar, actualizar parcialmente y eliminar.
+* ****Modelo clásico****: la clase `TerminoClave` representa un registro mediante las propiedades ****privadas**** `termino` y `termino_ingles`, con getters, setters y `toArray()` para construir el JSON.
+* ****Identificador propio****: `termino` funciona como clave primaria del recurso y permite identificar un término individual.
+* ****Validación en el controlador****: se validan los datos recibidos en cada operación HTTP antes de enviarlos al servicio.
+* ****Reglas propias del recurso****: `termino` debe identificar de manera única el registro y `termino_ingles` contiene su traducción correspondiente.
+* Capas con interfaces: `IRepositorioTerminoClave` como contrato PHP, implementada por el repositorio concreto del motor de BD utilizado en la versión.
+* Configuración de conexión mediante variables de entorno y PDO con *prepared statements*.
+* Endpoint `/api/termino_clave` específico para este recurso.
+* Endpoint `GET /api/termino_clave/{termino}` para consultar un término específico.
+* Respuestas exclusivamente en **JSON**.
+* ****Front `front_php`**** con las pantallas correspondientes a `termino_clave`: inicio, listado, agregar y editar.
+* El front se comunica con la API mediante HTTP y ****no abre ninguna conexión a la base de datos****.
+* Los términos y sus traducciones se manejan como registros independientes.
+* No se establecen relaciones mediante claves foráneas en la v1.
+
+****No incluye (y es deliberado — ver [mapa de versiones](../0_mapa_versiones.md)):****
+
+* Relaciones mediante claves foráneas con otras tablas.
+* Asociación de un término con una línea de investigación, programa, red o área de conocimiento.
+* Traducción automática.
+* Integración con servicios externos de traducción.
+* Búsqueda semántica o procesamiento lingüístico.
+* Autenticación de usuarios en el front.
+* Lógica de aplicación en JavaScript.
+* Frameworks de front.
+* Frameworks PHP, Composer o librerías externas.
+* Funcionalidades pertenecientes a versiones posteriores.
+
+## 2.2 Alcance — `linea_investigacion`
+
+****Incluye:****
+
+* CRUD de `linea_investigacion`: listar, obtener por `id`, crear, reemplazar, actualizar parcialmente y eliminar.
+* ****Modelo clásico****: la clase `LineaInvestigacion` representa cada registro mediante las propiedades ****privadas**** `id`, `nombre` y `descripcion`, con getters, setters y `toArray()` para construir el JSON.
+* ****Identificador propio****: `id` es un identificador autoincremental generado por la base de datos.
+* ****Validación en el controlador****: cada operación HTTP valida los datos antes de enviarlos al servicio.
+* ****Reglas propias del recurso****: `nombre` identifica el nombre de la línea y `descripcion` contiene la explicación de su temática o propósito.
+* En las operaciones de creación, el `id` es generado por la base de datos y no debe ser proporcionado obligatoriamente por el cliente.
+* Capas con interfaces: `IRepositorioLineaInvestigacion` como contrato PHP, implementada por el repositorio concreto del motor de BD utilizado en la versión.
+* Configuración de conexión mediante variables de entorno y PDO con *prepared statements*.
+* Endpoint `/api/linea_investigacion` específico para este recurso.
+* Endpoint `GET /api/linea_investigacion/{id}` para consultar una línea específica.
+* Respuestas exclusivamente en **JSON**.
+* ****Front `front_php`**** con las pantallas correspondientes a `linea_investigacion`: inicio, listado, agregar y editar.
+* El front se comunica con la API mediante HTTP y ****no abre ninguna conexión a la base de datos****.
+* La tabla funciona como recurso independiente durante la v1.
+
+****No incluye (y es deliberado — ver [mapa de versiones](../0_mapa_versiones.md)):****
+
+* Relaciones mediante claves foráneas con otras tablas.
+* Asociación de una línea de investigación con programas, áreas de conocimiento, términos clave o redes.
+* Generación automática de relaciones entre líneas.
+* Autenticación de usuarios en el front.
+* Lógica de aplicación en JavaScript.
+* Frameworks de front.
+* Frameworks PHP, Composer o librerías externas.
+* Otros motores de base de datos o fábrica de repositorios si corresponden a versiones posteriores.
+* Funcionalidades pertenecientes a versiones posteriores.
+
+## 2.3 Alcance — `programa`
+
+****Incluye:****
+
+* CRUD de `programa`: listar, obtener por `id`, crear, reemplazar, actualizar parcialmente y eliminar.
+* ****Modelo clásico****: la clase `Programa` representa cada registro mediante propiedades ****privadas**** correspondientes a `id`, `nombre`, `tipo`, `nivel`, fechas, cohortes, graduados, ciudad y facultad, con getters, setters y `toArray()` para construir el JSON.
+* ****Identificador propio****: `id` identifica de manera única cada programa académico.
+* ****Validación en el controlador****: se valida la información recibida en cada operación HTTP antes de enviarla al servicio.
+* ****Reglas propias del recurso****: los datos del programa se validan de acuerdo con la información académica que representa: nombre, tipo, nivel, fechas, cohortes, graduados, ciudad y facultad.
+* Capas con interfaces: `IRepositorioPrograma` como contrato PHP, implementada por el repositorio concreto del motor de BD utilizado en la versión.
+* Configuración de conexión mediante variables de entorno y PDO con *prepared statements*.
+* Endpoint `/api/programa` específico para este recurso.
+* Endpoint `GET /api/programa/{id}` para consultar un programa específico.
+* Respuestas exclusivamente en **JSON**.
+* ****Front `front_php`**** con las pantallas correspondientes a `programa`: inicio, listado, agregar y editar.
+* El front se comunica con la API mediante HTTP y ****no abre ninguna conexión a la base de datos****.
+* Carga inicial de los **191 registros** definidos para la versión 1.
+* `ciudad` y `facultad` se manejan como datos propios del registro y no como claves foráneas en la v1.
+
+****No incluye (y es deliberado — ver [mapa de versiones](../0_mapa_versiones.md)):****
+
+* Relaciones mediante claves foráneas con otras tablas.
+* Asociación de un programa con un área de conocimiento, línea de investigación, red o término clave.
+* Gestión independiente de ciudades.
+* Gestión independiente de facultades.
+* Gestión independiente de cohortes.
+* Cálculos o procesos externos relacionados con graduados.
+* Autenticación de usuarios en el front.
+* Lógica de aplicación en JavaScript.
+* Frameworks de front.
+* Frameworks PHP, Composer o librerías externas.
+* Funcionalidades pertenecientes a versiones posteriores.
+
+## 2.4 Alcance — `red`
+
+****Incluye:****
+
+* CRUD de `red`: listar, obtener por `idr`, crear, reemplazar, actualizar parcialmente y eliminar.
+* ****Modelo clásico****: la clase `Red` representa cada registro mediante las propiedades ****privadas**** `idr`, `nombre`, `url` y `pais`, con getters, setters y `toArray()` para construir el JSON.
+* ****Identificador propio****: `idr` identifica de manera única cada red académica.
+* ****Validación en el controlador****: cada operación HTTP valida los datos recibidos antes de enviarlos al servicio.
+* ****Reglas propias del recurso****: `nombre` representa el nombre de la red, `url` su dirección web y `pais` el país asociado.
+* Capas con interfaces: `IRepositorioRed` como contrato PHP, implementada por el repositorio concreto del motor de BD utilizado en la versión.
+* Configuración de conexión mediante variables de entorno y PDO con *prepared statements*.
+* Endpoint `/api/red` específico para este recurso.
+* Endpoint `GET /api/red/{idr}` para consultar una red específica.
+* Respuestas exclusivamente en **JSON**.
+* ****Front `front_php`**** con las pantallas correspondientes a `red`: inicio, listado, agregar y editar.
+* El front se comunica con la API mediante HTTP y ****no abre ninguna conexión a la base de datos****.
+* `url` se almacena como información de la red y no implica una conexión automática con el sitio externo.
+* `pais` se maneja como información propia del registro y no como clave foránea en la v1.
+
+****No incluye (y es deliberado — ver [mapa de versiones](../0_mapa_versiones.md)):****
+
+* Relaciones mediante claves foráneas con otras tablas.
+* Asociación de una red con programas, líneas de investigación, áreas de conocimiento o términos clave.
+* Consumo automático del contenido de las URL almacenadas.
+* Validación mediante conexión al sitio externo indicado en `url`.
+* Gestión independiente de países.
+* Autenticación de usuarios en el front.
+* Lógica de aplicación en JavaScript.
+* Frameworks de front.
+* Frameworks PHP, Composer o librerías externas.
+* Funcionalidades pertenecientes a versiones posteriores.
+
 
 ## 3. Requisitos funcionales
 
 ### 3.A — La API (`api_facturas`, puerto 8022)
 
-> La v1 usa **los cinco verbos HTTP** (GET, POST, PUT, PATCH, DELETE) y las
-> **tres vías de envío de datos**: parámetro de ruta (`/{codigo}`), query
-> string (`?limite=N`) y body JSON. Es parte del objetivo didáctico.
+> La v1 utiliza **los cinco verbos HTTP** (GET, POST, PUT, PATCH, DELETE)
+> para los cinco recursos. También utiliza las tres vías de envío de datos:
+> parámetro de ruta (`/{identificador}`), query string (`?limite=N`) y body
+> JSON. La forma concreta de identificar cada recurso depende de su clave
+> primaria.
+>
+> Los cinco recursos de esta versión son:
+>
+> * `area_conocimiento`
+> * `termino_clave`
+> * `linea_investigacion`
+> * `programa`
+> * `red`
+>
+> Cada recurso posee su propia ruta, controlador, servicio y repositorio.
 
-#### RF1 — Listar productos (GET + query string)
-`GET /api/producto` → 200 con envoltura `{tabla, limite, total, datos:[…]}`.
-- Query param opcional `limite` (entero > 0, por defecto 1000).
-- Tabla vacía → **204** sin cuerpo.
+---
 
-#### RF2 — Obtener por código (GET + parámetro de ruta)
-`GET /api/producto/{codigo}` → 200 con el producto; inexistente → 404.
+### RF1 — Listar `area_conocimiento`
 
-#### RF3 — Crear producto (POST + body)
-`POST /api/producto` con body JSON validado por la **validación del controlador**
-(`codigo` 1–10 caracteres, `nombre` no vacío, `stock` entero ≥ 0,
-`valorunitario` numérico ≥ 0 — todos obligatorios).
-Éxito → 200 `{estado, mensaje}`; body inválido → **422 con la lista de
-errores**; código duplicado → 500 con el error del motor en `detalle`.
+`GET /api/area_conocimiento` → 200 con la colección de registros.
 
-#### RF4 — Reemplazar producto (PUT + body completo)
-`PUT /api/producto/{codigo}` con body de **todos los campos obligatorios**
-(`nombre`, `stock`, `valorunitario`): PUT reemplaza el recurso completo —
-omitir un campo es 422, no "dejarlo como estaba".
-Devuelve `filasAfectadas`; código inexistente → 404.
+* Query param opcional `limite` (entero > 0, por defecto 1000).
+* La respuesta identifica la tabla y contiene los registros de
+  `area_conocimiento`.
+* Cada registro contiene `id`, `gran_area`, `area` y `disciplina`.
+* Tabla vacía → **204** sin cuerpo.
 
-#### RF5 — Actualizar parcialmente (PATCH + body parcial)
-`PATCH /api/producto/{codigo}` con body de **campos opcionales**: solo se
-modifican los enviados (cada uno validado si llega). Es el contraste
-didáctico con PUT. Devuelve `filasAfectadas`; inexistente → 404;
-body vacío → 400.
+### RF2 — Obtener `area_conocimiento` por `id`
 
-#### RF6 — Eliminar producto (DELETE)
-`DELETE /api/producto/{codigo}`. Devuelve `filasEliminadas`;
-inexistente → 404.
+`GET /api/area_conocimiento/{id}` → 200 con el registro solicitado.
 
-#### RF7 — Diagnóstico
-`GET /` → JSON con mensaje, versión (`"v1"`) y la ruta de los contratos.
+* El parámetro de ruta corresponde al campo `id`.
+* Si el registro no existe → **404**.
 
-### 3.B — El front (`front_php`, puerto 8020)
+### RF3 — Crear `area_conocimiento`
 
-> Aquí no hay verbos ni códigos de estado: **el usuario no sabe qué es un
-> 422**. Los requisitos del front se escriben en lo que la persona ve y hace.
-> La traducción entre las dos cosas es justamente el trabajo del front, y
-> está en [6_contracts.md](6_contracts.md) §9.
+`POST /api/area_conocimiento` con body JSON.
 
-#### RF8 — Cada pantalla tiene su propia dirección, y se ve terminada
-`/` (inicio) · `/productos` (listado) · `/productos/nuevo` (agregar) ·
-`/productos/{codigo}/editar` (editar). Ninguna dirección lleva el nombre de
-la tabla como parámetro: se pueden guardar como marcador y poner en un menú.
-Una dirección que no existe responde 404 **con el marco de la aplicación**,
-no con una página en blanco del servidor.
+El body contiene los campos correspondientes al recurso:
 
-Y las pantallas llegan **con sus estilos aplicados**: la hoja de Bootstrap y
-la del proyecto se sirven desde el propio front, no desde internet, así que
-un salón sin red ve exactamente lo mismo.
+* `gran_area`
+* `area`
+* `disciplina`
 
-#### RF9 — Ver el catálogo
-`/productos` muestra una tabla con las columnas **Código, Nombre, Stock y
-Valor unitario**, con los datos que devolvió la API. Si no hay ninguno, la
-pantalla lo dice con palabras y ofrece agregar el primero — **una tabla vacía
-no es un error**.
+La validación se realiza en el controlador.
 
-#### RF10 — Agregar
-`/productos/nuevo` presenta el formulario con los cuatro campos. Al guardar,
-la pantalla vuelve al listado con un aviso de éxito. Si la API rechaza los
-datos, **el formulario vuelve con lo que la persona había escrito** y los
-motivos en español: perder lo digitado por un error de validación la castiga
-dos veces.
+* Body válido → **200** con `{estado, mensaje}`.
+* Body inválido → **422** con la lista de errores.
+* Un `id` generado o suministrado de acuerdo con la definición de la BD no
+  debe permitir duplicar un registro existente.
 
-#### RF11 — Editar, con dos botones que no hacen lo mismo
-`/productos/{codigo}/editar` trae la ficha cargada y el **código de solo
-lectura** —es la identidad de la fila—, con dos botones:
+### RF4 — Reemplazar `area_conocimiento`
 
-- **«Guardar la ficha completa»** manda los tres campos aunque alguno esté en
-  blanco, así que un nombre vacío se rechaza;
-- **«Guardar solo lo que cambié»** manda **únicamente lo diligenciado**, así
-  que el mismo formulario a medio llenar sí se guarda y lo demás queda como
-  estaba.
+`PUT /api/area_conocimiento/{id}` con el body completo del recurso.
 
-Es el contraste PUT/PATCH de RF4 y RF5, pero visto desde donde se usa: la
-diferencia no la decide ninguna regla de negocio, la decide **qué se envía**.
+El body debe contener:
 
-#### RF12 — Eliminar, con confirmación
-Cada fila del listado ofrece eliminar, se pregunta antes, y la petición viaja
-por POST y no por un enlace: un enlace que borra lo puede disparar el
-navegador solo al precargar la página. Al terminar, aviso y listado
-actualizado.
+* `gran_area`
+* `area`
+* `disciplina`
 
-#### RF13 — La pantalla sobrevive a la API caída
-Con la API apagada, las pantallas **siguen respondiendo**, con su menú y su
-marco intactos, y muestran dentro de la aplicación un aviso de que el
-servicio no está disponible. No muestran ni una fila: el front no tiene por
-dónde llegar a la base de datos. Cuando la API vuelve, los datos vuelven sin
-tocar nada.
+PUT reemplaza el recurso completo.
+
+* Omitir un campo obligatorio → **422**.
+* Registro inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+### RF5 — Actualizar parcialmente `area_conocimiento`
+
+`PATCH /api/area_conocimiento/{id}` con body parcial.
+
+* Los campos son opcionales.
+* Solo se modifican los campos enviados.
+* Cada campo recibido se valida.
+* Body vacío → **400**.
+* Registro inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+---
+
+### RF6 — Listar `termino_clave`
+
+`GET /api/termino_clave` → 200 con la colección de términos.
+
+* Query param opcional `limite` (entero > 0, por defecto 1000).
+* Cada registro contiene `termino` y `termino_ingles`.
+* Tabla vacía → **204** sin cuerpo.
+
+### RF7 — Obtener `termino_clave` por término
+
+`GET /api/termino_clave/{termino}` → 200 con el término solicitado.
+
+* El parámetro de ruta corresponde a `termino`, que es la clave primaria.
+* Si el término no existe → **404**.
+
+### RF8 — Crear `termino_clave`
+
+`POST /api/termino_clave` con body JSON.
+
+El body contiene:
+
+* `termino`
+* `termino_ingles`
+
+La validación se realiza en el controlador.
+
+* Body válido → **200** con `{estado, mensaje}`.
+* Body inválido → **422** con la lista de errores.
+* Si `termino` ya existe → **500** con el error del motor en `detalle`.
+
+### RF9 — Reemplazar `termino_clave`
+
+`PUT /api/termino_clave/{termino}` con el body completo.
+
+El body debe contener:
+
+* `termino_ingles`
+
+El identificador `termino` pertenece a la ruta.
+
+* Omitir `termino_ingles` → **422**.
+* Término inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+### RF10 — Actualizar parcialmente `termino_clave`
+
+`PATCH /api/termino_clave/{termino}` con body parcial.
+
+* Solo se modifica `termino_ingles` si fue enviado.
+* El campo recibido se valida.
+* Body vacío → **400**.
+* Término inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+---
+
+### RF11 — Listar `linea_investigacion`
+
+`GET /api/linea_investigacion` → 200 con la colección de líneas.
+
+* Query param opcional `limite` (entero > 0, por defecto 1000).
+* Cada registro contiene `id`, `nombre` y `descripcion`.
+* Tabla vacía → **204** sin cuerpo.
+
+### RF12 — Obtener `linea_investigacion` por `id`
+
+`GET /api/linea_investigacion/{id}` → 200 con la línea solicitada.
+
+* El parámetro de ruta corresponde a `id`.
+* Si el registro no existe → **404**.
+
+### RF13 — Crear `linea_investigacion`
+
+`POST /api/linea_investigacion` con body JSON.
+
+El body contiene:
+
+* `nombre`
+* `descripcion`
+
+El `id` es autoincremental y es generado por la base de datos.
+
+* Body válido → **200** con `{estado, mensaje}`.
+* Body inválido → **422** con la lista de errores.
+
+### RF14 — Reemplazar `linea_investigacion`
+
+`PUT /api/linea_investigacion/{id}` con body completo.
+
+El body debe contener:
+
+* `nombre`
+* `descripcion`
+
+PUT reemplaza el recurso completo.
+
+* Omitir un campo obligatorio → **422**.
+* Registro inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+### RF15 — Actualizar parcialmente `linea_investigacion`
+
+`PATCH /api/linea_investigacion/{id}` con body parcial.
+
+* `nombre` y `descripcion` son opcionales.
+* Solo se modifican los campos enviados.
+* Cada campo recibido se valida.
+* Body vacío → **400**.
+* Registro inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+---
+
+### RF16 — Listar `programa`
+
+`GET /api/programa` → 200 con la colección de programas.
+
+* Query param opcional `limite` (entero > 0, por defecto 1000).
+* Cada registro contiene los atributos propios de `programa`.
+* La respuesta permite identificar el total y los datos devueltos.
+* Tabla vacía → **204** sin cuerpo.
+
+Los campos del recurso son:
+
+* `id`
+* `nombre`
+* `tipo`
+* `nivel`
+* fechas
+* `cohortes`
+* `graduados`
+* `ciudad`
+* `facultad`
+
+### RF17 — Obtener `programa` por `id`
+
+`GET /api/programa/{id}` → 200 con el programa solicitado.
+
+* El parámetro de ruta corresponde a `id`.
+* Si el programa no existe → **404**.
+
+### RF18 — Crear `programa`
+
+`POST /api/programa` con body JSON.
+
+El body contiene los atributos propios del programa:
+
+* `nombre`
+* `tipo`
+* `nivel`
+* fechas
+* `cohortes`
+* `graduados`
+* `ciudad`
+* `facultad`
+
+La validación se realiza en el controlador.
+
+* Body válido → **200** con `{estado, mensaje}`.
+* Body inválido → **422** con la lista de errores.
+
+### RF19 — Reemplazar `programa`
+
+`PUT /api/programa/{id}` con body completo.
+
+El body debe contener todos los campos obligatorios definidos para
+`programa`.
+
+* Omitir un campo obligatorio → **422**.
+* Programa inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+### RF20 — Actualizar parcialmente `programa`
+
+`PATCH /api/programa/{id}` con body parcial.
+
+* Los campos son opcionales.
+* Solo se modifican los campos enviados.
+* Cada campo recibido se valida.
+* Body vacío → **400**.
+* Programa inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+---
+
+### RF21 — Listar `red`
+
+`GET /api/red` → 200 con la colección de redes.
+
+* Query param opcional `limite` (entero > 0, por defecto 1000).
+* Cada registro contiene `idr`, `nombre`, `url` y `pais`.
+* Tabla vacía → **204** sin cuerpo.
+
+### RF22 — Obtener `red` por `idr`
+
+`GET /api/red/{idr}` → 200 con la red solicitada.
+
+* El parámetro de ruta corresponde a `idr`.
+* Si la red no existe → **404**.
+
+### RF23 — Crear `red`
+
+`POST /api/red` con body JSON.
+
+El body contiene:
+
+* `idr`
+* `nombre`
+* `url`
+* `pais`
+
+La validación se realiza en el controlador.
+
+* Body válido → **200** con `{estado, mensaje}`.
+* Body inválido → **422** con la lista de errores.
+* `idr` duplicado → **500** con el error del motor en `detalle`.
+
+### RF24 — Reemplazar `red`
+
+`PUT /api/red/{idr}` con body completo.
+
+El identificador `idr` pertenece a la ruta.
+
+El body debe contener:
+
+* `nombre`
+* `url`
+* `pais`
+
+PUT reemplaza el recurso completo.
+
+* Omitir un campo obligatorio → **422**.
+* Red inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+### RF25 — Actualizar parcialmente `red`
+
+`PATCH /api/red/{idr}` con body parcial.
+
+* `nombre`, `url` y `pais` son opcionales.
+* Solo se modifican los campos enviados.
+* Cada campo recibido se valida.
+* Body vacío → **400**.
+* Red inexistente → **404**.
+* Devuelve `filasAfectadas`.
+
+---
+
+### RF26 — Eliminar `area_conocimiento`
+
+`DELETE /api/area_conocimiento/{id}`.
+
+* Elimina el registro identificado por `id`.
+* Devuelve `filasEliminadas`.
+* Registro inexistente → **404**.
+
+### RF27 — Eliminar `termino_clave`
+
+`DELETE /api/termino_clave/{termino}`.
+
+* Elimina el término identificado por `termino`.
+* Devuelve `filasEliminadas`.
+* Término inexistente → **404**.
+
+### RF28 — Eliminar `linea_investigacion`
+
+`DELETE /api/linea_investigacion/{id}`.
+
+* Elimina la línea identificada por `id`.
+* Devuelve `filasEliminadas`.
+* Registro inexistente → **404**.
+
+### RF29 — Eliminar `programa`
+
+`DELETE /api/programa/{id}`.
+
+* Elimina el programa identificado por `id`.
+* Devuelve `filasEliminadas`.
+* Programa inexistente → **404**.
+
+### RF30 — Eliminar `red`
+
+`DELETE /api/red/{idr}`.
+
+* Elimina la red identificada por `idr`.
+* Devuelve `filasEliminadas`.
+* Red inexistente → **404**.
+
+---
+
+### RF31 — Diagnóstico
+
+`GET /` → JSON con:
+
+* mensaje de diagnóstico;
+* versión (`"v1"`);
+* ruta de los contratos.
+
+---
+
+## 3.B — El front (`front_php`, puerto 8020)
+
+> En el front los requisitos se expresan desde lo que la persona ve y hace.
+> El usuario no necesita conocer los verbos HTTP, los códigos de estado ni
+> las rutas internas de la API.
+>
+> La traducción entre las acciones de la pantalla y los contratos de la API
+> corresponde al front.
+
+### RF32 — Pantallas de `area_conocimiento`
+
+El recurso debe disponer de:
+
+```text
+/area_conocimiento
+/area_conocimiento/nuevo
+/area_conocimiento/{id}/editar
+```
+
+La pantalla de listado muestra:
+
+* `id`
+* `gran_area`
+* `area`
+* `disciplina`
+
+La pantalla de creación permite diligenciar:
+
+* `gran_area`
+* `area`
+* `disciplina`
+
+La pantalla de edición permite modificar los datos del registro.
+
+Cada fila permite eliminar el registro con confirmación.
+
+### RF33 — Pantallas de `termino_clave`
+
+El recurso debe disponer de:
+
+```text
+/terminos_clave
+/terminos_clave/nuevo
+/terminos_clave/{termino}/editar
+```
+
+La pantalla de listado muestra:
+
+* `termino`
+* `termino_ingles`
+
+La pantalla de creación permite diligenciar el término y su traducción.
+
+La pantalla de edición permite modificar la traducción del término.
+
+Cada fila permite eliminar el término con confirmación.
+
+### RF34 — Pantallas de `linea_investigacion`
+
+El recurso debe disponer de:
+
+```text
+/lineas_investigacion
+/lineas_investigacion/nuevo
+/lineas_investigacion/{id}/editar
+```
+
+La pantalla de listado muestra:
+
+* `id`
+* `nombre`
+* `descripcion`
+
+La pantalla de creación permite diligenciar:
+
+* `nombre`
+* `descripcion`
+
+La pantalla de edición permite modificar los datos de la línea.
+
+Cada fila permite eliminar la línea con confirmación.
+
+### RF35 — Pantallas de `programa`
+
+El recurso debe disponer de:
+
+```text
+/programas
+/programas/nuevo
+/programas/{id}/editar
+```
+
+La pantalla de listado muestra los atributos principales del programa.
+
+La pantalla de creación permite diligenciar los campos propios de
+`programa`.
+
+La pantalla de edición permite modificar los datos del programa.
+
+Cada fila permite eliminar el programa con confirmación.
+
+### RF36 — Pantallas de `red`
+
+El recurso debe disponer de:
+
+```text
+/redes
+/redes/nuevo
+/redes/{idr}/editar
+```
+
+La pantalla de listado muestra:
+
+* `idr`
+* `nombre`
+* `url`
+* `pais`
+
+La pantalla de creación permite diligenciar los datos de la red.
+
+La pantalla de edición permite modificar los datos de la red.
+
+Cada fila permite eliminar la red con confirmación.
+
+### RF37 — Estados vacíos
+
+Cuando cualquiera de las cinco tablas no tenga registros:
+
+* La pantalla debe informar que no existen registros.
+* Debe ofrecer la posibilidad de crear el primero.
+* Una tabla vacía no se considera un error.
+
+### RF38 — Errores de la API
+
+Cuando la API rechace una operación:
+
+* El front conserva los datos que la persona había diligenciado.
+* Los errores se presentan en español.
+* El usuario no debe visualizar códigos HTTP, rutas de API ni excepciones
+  del motor de base de datos.
+
+### RF39 — Front independiente de la API
+
+Con la API apagada:
+
+* Las pantallas del front continúan respondiendo.
+* El menú y el marco de la aplicación continúan visibles.
+* Se muestra un aviso indicando que el servicio no está disponible.
+* No se muestran registros porque el front no puede obtenerlos de la API.
+
+Cuando la API vuelve a estar disponible, las pantallas vuelven a mostrar los
+datos sin modificar el código del front.
+
+---
 
 ## 4. Requisitos no funcionales
 
-- **RNF1 — Capas estrictas:** el controlador no toca SQL; el servicio no
-  conoce HTTP ni el motor; el repositorio no conoce HTTP. Contratos con
-  `interface` de PHP.
-- **RNF2 — PHP puro:** sin framework, sin Composer, sin `vendor/` (Artículo 2).
-- **RNF3 — SQL SIEMPRE en prepared statements de PDO**; nada de concatenar
-  valores.
-- **RNF4 — Errores uniformes:** `{estado, mensaje, detalle}` (y `errores:[…]`
-  en el 422); InvalidArgumentException→400 · NoEncontradoExcepcion→404 ·
-  PDOException y demás→500.
-- **RNF5 — Sin anticipación:** ni fábrica multi-motor ni selección de motor
-  en v1 (los introduce la v3 cuando exista el segundo motor).
-- **RNF6 — El front no toca la base ni el código de la API:** en `front_php`
-  no hay `new PDO(...)` ni un `require` de nada que viva en `api_facturas`.
-  Lo único que comparten es el JSON. El compose lo hace cumplir: el servicio
-  del front no recibe credenciales de la base ni depende de ella.
-- **RNF7 — El front no le habla al usuario en jerga:** ninguna pantalla
-  muestra verbos HTTP, números de estado, rutas de la API ni nombres de
-  motores. Los errores llegan traducidos en un solo sitio
-  (`cliente_api.php`), no en cada vista.
+* **RNF1 — Capas estrictas:** el controlador no toca SQL; el servicio no
+  conoce HTTP ni el motor; el repositorio no conoce HTTP. Los contratos se
+  definen mediante `interface` de PHP.
+
+* **RNF2 — PHP puro:** sin framework, sin Composer y sin `vendor/`.
+
+* **RNF3 — SQL siempre en prepared statements de PDO:** ningún valor recibido
+  desde HTTP se concatena directamente al SQL.
+
+* **RNF4 — Errores uniformes:** las respuestas de error utilizan
+  `{estado, mensaje, detalle}` y, para los errores de validación, `errores:[…]`.
+
+* **RNF5 — Sin anticipación:** la v1 no incorpora fábrica multi-motor ni
+  selección de motor. Esas capacidades corresponden a versiones posteriores.
+
+* **RNF6 — El front no toca la base ni el código de la API:** en
+  `front_php` no existe `new PDO(...)` ni un `require` de clases pertenecientes
+  a `api_facturas`. Lo único que comparten ambos procesos es el JSON.
+
+* **RNF7 — El front no habla al usuario en jerga técnica:** ninguna pantalla
+  muestra verbos HTTP, códigos de estado, rutas internas de la API, SQL, PDO
+  ni nombres de motores.
+
+* **RNF8 — Cada recurso posee su contrato independiente:** las reglas,
+  atributos e identificadores de `area_conocimiento`, `termino_clave`,
+  `linea_investigacion`, `programa` y `red` no se resuelven mediante una ruta
+  genérica `/api/{tabla}`.
+
+---
 
 ## 5. Criterios de aceptación
 
-1. **`docker compose up -d --build` — un solo comando —** deja corriendo la
-   BD (creada con el `db/init.sql` provisto: 12 tablas), la API y el front;
-   `GET /` responde el JSON de diagnóstico y `http://localhost:8020` abre la
-   pantalla de inicio. Guardar un `.php` y refrescar el navegador muestra el
-   cambio (sin reiniciar nada: PHP reinterpreta).
-2. `GET /api/producto` devuelve los 8 productos de ejemplo con
-   `{tabla:"producto", total:8, datos:[…]}`, y `GET /api/producto?limite=3`
-   devuelve exactamente 3.
-3. `GET /api/producto/PR001` devuelve la Laptop Lenovo; `/api/producto/PR999`
-   responde 404 con mensaje claro.
-4. Ciclo completo con los 5 verbos: `POST` crea `PR009` → `PUT` lo reemplaza
-   completo → `PATCH` le cambia solo el stock → `GET` lo confirma → `DELETE`
-   lo elimina, y un segundo `DELETE` responde 404. Además, un `PUT` sin el
-   campo `nombre` responde 422 (reemplazo completo) mientras el mismo body en
-   `PATCH` responde 200 (parcial) — la diferencia entre ambos verbos.
-5. `POST` con `stock: -5` o sin `nombre` → **422 con la lista de errores**
-   (lo rechaza la validación del controlador, nunca llega a la BD); `POST` con código
-   duplicado → 500 con el error del motor.
-6. Prueba de capas (la evidencia de que la arquitectura quedó bien): el
-   servicio se puede probar con un repositorio **falso** en memoria que
-   implemente `IRepositorioProducto`, sin MariaDB corriendo
-   (`php pruebas/prueba_capas.php` o script equivalente).
-7. `http://localhost:8020/productos` muestra los 8 productos con sus cuatro
-   columnas, y cada pantalla responde por su dirección propia (`/`,
-   `/productos`, `/productos/nuevo`, `/productos/{codigo}/editar`); una
-   dirección inventada da 404 con el marco de la aplicación. Y las pantallas
-   **se ven con sus estilos**: `/publico/bootstrap.min.css` y
-   `/publico/estilos.css` responden 200 **con tipo de contenido `text/css`**.
-   El criterio dice el tipo y no solo el código porque un 200 que devuelve
-   HTML disfrazado de CSS deja la pantalla igual de fea.
-8. El recorrido completo **desde la pantalla**: agregar un producto → verlo
-   en el listado → «Guardar la ficha completa» → dejar el nombre en blanco y
-   volver a intentarlo (se rechaza, con el motivo en español) → «Guardar solo
-   lo que cambié» con únicamente el stock lleno (guarda, **y el nombre no se
-   borra**) → eliminar, con su confirmación, y desaparece del listado.
-9. Ninguna de las pantallas muestra `PUT`, `PATCH`, `DELETE`, `/api/`, `PDO`,
-   `SELECT` ni `MariaDB` en el texto que el usuario ve.
-10. **La prueba de los dos procesos:** con `docker compose stop api-facturas`
-    —la base de datos **encendida**—, `/productos` sigue respondiendo, con su
-    menú y su aviso, y **sin una sola fila**. Al encender la API otra vez,
-    los datos vuelven sin tocar nada.
+1. **`docker compose up -d --build` — un solo comando** deja corriendo la BD,
+   la API y el front. `GET /` responde el JSON de diagnóstico y
+   `http://localhost:8020` abre la pantalla de inicio.
 
-> El criterio 10 es el que no se puede fingir. Los datos siguen ahí, en
-> MariaDB, a un puerto de distancia: si la pantalla los mostrara, sería
-> porque el front llegó a la base por su cuenta. No los muestra.
+2. `GET /api/area_conocimiento` devuelve los registros del catálogo y cada
+   registro contiene `id`, `gran_area`, `area` y `disciplina`.
+
+3. `GET /api/termino_clave` devuelve los términos con `termino` y
+   `termino_ingles`.
+
+4. `GET /api/linea_investigacion` devuelve las líneas con `id`, `nombre` y
+   `descripcion`.
+
+5. `GET /api/programa` devuelve los programas con los atributos definidos para
+   este recurso.
+
+6. `GET /api/red` devuelve las redes con `idr`, `nombre`, `url` y `pais`.
+
+7. Cada recurso permite completar su ciclo CRUD: crear → consultar →
+   reemplazar → actualizar parcialmente → eliminar.
+
+8. En cada recurso, `PUT` exige el cuerpo completo mientras `PATCH` permite
+   modificar únicamente los campos enviados.
+
+9. Una consulta a un identificador inexistente responde **404**.
+
+10. Un body que no cumple las reglas de validación responde **422** con la
+    lista de errores.
+
+11. Un `PATCH` con body vacío responde **400**.
+
+12. Un listado sin registros responde **204** en la API y el front muestra
+    un mensaje comprensible indicando que no existen registros.
+
+13. El servicio puede probarse con un repositorio falso que implemente la
+    interfaz correspondiente, sin necesidad de tener la base de datos
+    encendida.
+
+14. Cada recurso tiene su propia dirección en el front y sus pantallas
+    permiten listar, crear, editar y eliminar sus registros.
+
+15. Ninguna pantalla muestra `PUT`, `PATCH`, `DELETE`, `/api/`, `PDO`,
+    `SELECT` ni el nombre del motor de base de datos al usuario.
+
+16. Con la API detenida y la base de datos encendida, el front continúa
+    mostrando su estructura y un aviso de servicio no disponible, pero no
+    muestra registros.
+
+17. Al volver a encender la API, los datos aparecen nuevamente sin modificar
+    el front.
+
+---
 
 ## 6. Glosario mínimo
 
-| Término | Significado |
-|---|---|
-| **Documento (del kit)** | Texto que DESCRIBE qué/cómo construir; se lee y de él sale el código |
-| **Artefacto (provisto)** | Archivo que se entrega LISTO y se usa tal cual, sin generarlo ni modificarlo — en v1: `db/init.sql` (la BD completa) |
-| **Criterio de aceptación** | Prueba verificable que decide si la versión está terminada (no es opinión) |
-| **Rebanada vertical** | Un recorte del sistema que atraviesa TODAS las capas (HTTP→negocio→datos) aunque cubra una sola entidad |
-| **Front controller** | El único `.php` que recibe TODAS las peticiones (`index.php`) y las enruta al controlador que corresponde. **Lo tienen los dos**: la API y el front, cada uno el suyo |
-| **Front** (la capa) | El programa que pinta las pantallas. No confundirlo con «front controller»: son dos usos distintos de la misma palabra, y en este proyecto conviven |
+| Término                    | Significado                                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Documento**              | Texto que describe qué y cómo construir; de él sale el código.                                                                                    |
+| **Artefacto**              | Archivo que se entrega listo y se utiliza tal cual.                                                                                               |
+| **Criterio de aceptación** | Prueba verificable que determina si la versión está terminada.                                                                                    |
+| **Rebanada vertical**      | Recorte del sistema que atraviesa todas las capas (HTTP → negocio → datos) aunque cubra una sola entidad.                                         |
+| **Front controller**       | Único `.php` que recibe las peticiones y las enruta al controlador correspondiente. Lo tienen tanto la API como el front, cada uno en su proceso. |
+| **Front**                  | Programa que presenta las pantallas al usuario. No debe confundirse con `front controller`.                                                       |
+| **CRUD**                   | Crear, consultar, actualizar y eliminar registros.                                                                                                |
+| **PUT**                    | Operación que reemplaza un recurso completo.                                                                                                      |
+| **PATCH**                  | Operación que modifica parcialmente un recurso.                                                                                                   |
+| **Clave primaria**         | Campo o conjunto de campos que identifica de manera única un registro.                                                                            |
+| **Prepared statement**     | Forma de ejecutar SQL mediante parámetros separados de los valores recibidos.                                                                     |
+
 
 ## 7. Definición de TERMINADA
 
@@ -307,7 +892,7 @@ de la v2 ([mapa](../0_mapa_versiones.md)).
 | C3 | Crear con una llave que ya existe, ¿409 o 500? | **500**, con el error del motor en `detalle`: la llave la defiende la BD, no la API. Convertirlo en 409 sería lógica de negocio que esta versión no pide. | Convenciones de error · contrato del `POST` |
 | C4 | `PATCH` con el body vacío, ¿200 sin hacer nada, o error? | **400**: pedir una actualización sin decir qué actualizar es una regla de negocio rota. | Contrato del `PATCH` |
 
-| C5 | El front y la API son los dos PHP: ¿el front puede usar la clase `Producto` de la API con un `require_once`? | **No.** Funcionaría, y por eso hay que decirlo explícito: dejarían de ser dos procesos, y renombrar un método adentro de la API rompería la pantalla sin que nadie tocara el contrato. El front trabaja con **arrays**, que es lo que el JSON trae. | Constitución Art. 3 · RNF6 · `cliente_api.php` |
+| C5 | El front y la API son los dos PHP: ¿el front puede usar la clase `area_conocimiento` de la API con un `require_once`? | **No.** Funcionaría, y por eso hay que decirlo explícito: dejarían de ser dos procesos, y renombrar un método adentro de la API rompería la pantalla sin que nadie tocara el contrato. El front trabaja con **arrays**, que es lo que el JSON trae. |
 | C6 | Cuando la API no responde, ¿el front muestra una página de error o su pantalla? | **Su pantalla**, con el aviso adentro y sin datos. Una página de error del servidor no demuestra nada; una pantalla en pie con la tabla vacía demuestra que son dos procesos. | RF13 · criterio 10 |
 | C8 | ¿Los estilos se traen de un CDN? | **No: se guardan en `front_php/publico/`.** Un CDN es una línea más corta, pero el día que el salón se quede sin internet la pantalla se ve como en 1995 — y eso pasa en clase, no en teoría. Dos archivos en el repositorio lo resuelven para siempre. | `vistas/plantilla.php` · 4_research D13 |
 | C7 | El formulario manda texto y la API pide números. ¿Quién convierte? | **El front convierte la FORMA** (`"12"` → `12`) porque un formulario HTML solo produce texto, y mandarlo entre comillas haría que la API lo rechazara **siendo correcto**. Lo que el front NO hace es juzgar el VALOR: si alguien escribió «doce», eso viaja como «doce» y la API dice que no sirve. | `front_php/index.php` · 6_contracts §9 |

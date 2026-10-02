@@ -1,4 +1,4 @@
-# Investigación y decisiones — Versión 1: producto de punta a punta
+# Investigación y decisiones — Versión 1: area_conocimiento, termino_clave, linea_investigacion, programa y red de punta a punta
 
 > **Versión 1** · **Lectura opcional** (el porqué de las decisiones del plan,
 > con las alternativas que se evaluaron y descartaron). Complementa a
@@ -38,20 +38,20 @@ otros lenguajes.
 **Alternativa descartada:** escribir de una vez la fábrica multi-motor.
 **Decisión:** `ensamblador.php` con una función que instancia la única
 combinación existente (YAGNI con dirección).
-**Por qué:** una fábrica con un solo producto es código muerto. La interfaz
-`IRepositorioProducto` SÍ se escribe hoy — es la puerta por la que entrará
+**Por qué:** una fábrica con un solo area_conocimiento, termino_clave, linea_investigacion, programa y red es código muerto. Las interfaces
+`IRepositorioAreaConocimiento`, `IRepositorioTerminoClave`, `IRepositorioLineaInvestigacion`, `IRepositorioPrograma`, `IRepositorioRed` SÍ se escriben hoy — son las puertas por las que entrará
 MariaDB — pero el mecanismo de selección llega cuando exista algo que
 seleccionar (v3). El examen del principio abierto/cerrado será ese: en v3,
 solo `ensamblador.php` cambia.
 
-## D4 — La BD completa desde la v1 (la API solo toca `producto`)
+## D4 — La BD completa desde la v1 (la API solo toca `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red`)
 
 **Alternativa descartada:** una BD mínima que crece con cada versión.
-**Decisión:** `db/init.sql` crea `bdfacturas` COMPLETA (12 tablas, trigger,
-SPs); la regla es que el código de v1 solo puede nombrar `producto`.
+**Decisión:** `db/init.sql` crea `bdgestion` COMPLETA (19 tablas, trigger,
+SPs); la regla es que el código de v1 solo puede nombrar `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red`.
 **Por qué:** los estudiantes ya vieron bases de datos — la BD es
 **infraestructura dada**; lo que se construye por versiones es la API. Evita
-migraciones entre versiones y deja el trigger de facturación esperando a la
+migraciones entre versiones y deja el trigger esperando a la
 v2. Costo asumido: 11 tablas a la vista que aún no se usan — por eso la regla
 se declara explícita en la spec.
 
@@ -60,8 +60,7 @@ se declara explícita en la spec.
 **Alternativas descartadas:** una clase validadora aparte (mete un concepto
 extra a la estructura), meter la validación dentro del modelo o del
 servicio, o no validar y dejar que la BD rechace.
-**Decisión:** el modelo `Producto` es una clase **básica** (las 4
-propiedades tipadas — el dato como objeto, nada más), y la validación del
+**Decisión:** los modelos `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red` son unas clases **básicas** (el modelo de `area_conocimiento` son las 3 propiedades - el dato como objeto, el modelo de `termino_clave` es una propiedad - el dato como objeto, el modelo de `linea_investigacion` son las 2 propiedades - el dato como objeto, el modelo de `programa` son las 10 propiedades - el dato como objeto, el modelo de `red` son las 3 propiedades - el dato como objeto. Es esto y nada más para estos modelos), y la validación del
 body vive en el **controlador** como métodos privados: la frontera HTTP
 revisa lo que llega de afuera → 422 con lista de errores ANTES de tocar el
 servicio. La estructura queda en las 4 carpetas canónicas: controladores,
@@ -71,7 +70,7 @@ gratis; en PHP puro **construirla** enseña qué hace realmente una frontera
 de entrada. Validar es trabajo de quien recibe la petición (el controlador),
 y el modelo se mantiene simple para no confundir: modelo = el dato con
 tipos. La validación por verbo materializa la semántica HTTP: el mismo body
-`{"stock": 7}` falla en PUT (le faltan campos) y pasa en PATCH — la
+`{"cant_graduados": 7}` falla en PUT (cant_graduados NO se rellenan con "números creibles", se dejan como "sin datos") y pasa en PATCH — la
 diferencia queda escrita en código, no en comentarios.
 
 ## D6 — PDO con prepared statements (SQL visible)
@@ -101,7 +100,7 @@ reinterpreta cada petición (ni siquiera existe "reload").
 
 **Alternativa descartada:** `docker run` a mano para la BD y PHP local como
 única forma de correr.
-**Decisión:** `docker-compose.yml` con `mariadb` + `api-facturas` +
+**Decisión:** `docker-compose.yml` con `mariadb` + `api-area-conocimiento` + `api-termino-clave` + `api-linea-investigacion` + `api-programa` + `api-red` +
 `front-php` desde v1 — `docker compose up -d --build` deja todo funcionando.
 **Por qué:** el Artículo 4 de la constitución ("un solo comando") es
 permanente — y la constitución gana. El compose de v1 es mínimo y **crece por
@@ -154,8 +153,8 @@ sencilla resultó ser la más fácil de probar.
 ## D11 — `cliente_api.php` trabaja con arrays, no con las clases de la API
 
 **Alternativa descartada, y hay que nombrarla porque es tentadora:**
-`require_once __DIR__ . '/../api_facturas/modelos/Producto.php';` para usar
-en el front la clase `Producto` que ya existe. **Funcionaría.**
+`require_once __DIR__ . '/../api_gestion/modelos/Programa.php';` para usar
+en el front la clase `Programa` que ya existe. **Funcionaría.**
 **Decisión:** el front trabaja con los arrays que `json_decode` devuelve.
 **Por qué:** ese `require` los volvería un solo programa repartido en dos
 carpetas. Renombrar un método adentro de la API rompería la pantalla **sin
@@ -167,7 +166,7 @@ front. Es un precio real, y es el correcto: en este proyecto la tentación es
 mayor que en otros porque los dos están en PHP, y por eso la regla se escribe
 en vez de darse por obvia.
 
-## D13 — Bootstrap, y guardado en el repositorio en vez de traído de un CDN
+## D12 — Bootstrap, y guardado en el repositorio en vez de traído de un CDN
 
 **Alternativas descartadas:** escribir el CSS a mano (fue el primer intento) y
 enlazar Bootstrap desde un CDN.
@@ -188,7 +187,7 @@ instalada por un gestor de paquetes**, es un archivo copiado — no hay
 **Precio asumido:** 300 KB en el repositorio, y actualizar Bootstrap es
 volver a copiar el archivo. Los dos son baratos.
 
-## D12 — El aviso viaja en la sesión, y después de guardar se redirige
+## D13 — El aviso viaja en la sesión, y después de guardar se redirige
 
 **Alternativa descartada:** pintar el listado directamente en la respuesta
 del POST, sin redirigir.
