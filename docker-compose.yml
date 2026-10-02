@@ -1,0 +1,92 @@
+# docker-compose.yml
+# ---------------------------------------------------------------------------
+# ¿Qué es este archivo?
+#   Es el "director de orquesta" del proyecto. Con UN SOLO comando
+#   (`docker compose up -d --build`) levanta todos los servicios:
+#   la base de datos, la API y el front.
+#
+# ¿Qué levanta en la Fase 0?
+#   SOLO MariaDB. Los servicios de la API y el front se agregan en fases
+#   posteriores (Fase 6 y Fase 7), para poder construir y probar por partes.
+#
+# ¿Por qué `name: mi_v1_programa`?
+#   Porque en tu máquina también corre el proyecto del curso con sus puertos
+#   originales. Al darle un nombre propio al proyecto, Docker lo trata como
+#   algo DISTINTO: contenedores, redes y volúmenes separados, aunque las
+#   carpetas se llamen parecido. Así los dos conviven sin pisarse.
+#
+# ¿Por qué los puertos del host van con +100?
+#   El compose original publica 8020/8022/13326. Como aquí los dos proyectos
+#   van a estar encendidos a la vez, movemos los del host a 8120/8122/13426.
+#   ADENTRO de los contenedores todo queda igual que en los documentos
+#   (MariaDB sigue escuchando en 3306, la API en 8022, el front en 8020).
+# ---------------------------------------------------------------------------
+
+name: mi_v1_programa
+
+services:
+
+  # -------------------------------------------------------------------------
+  # SERVICIO: mariadb
+  # La base de datos. Es la única pieza de infraestructura "dada": el script
+  # db/init.sql se monta tal cual y NO se modifica.
+  # -------------------------------------------------------------------------
+  mariadb:
+    # Imagen oficial de MariaDB, versión 11 (la que fija 3_plan.md).
+    image: mariadb:11
+
+    # Nombre del contenedor: cómodo para verlo con `docker ps` y para
+    # conectarse a él desde la terminal.
+    container_name: mi_v1_programa_mariadb
+
+    # Variables de entorno que la imagen de MariaDB lee al arrancar para
+    # crear la base, el usuario y la clave. Son las credenciales didácticas
+    # que fija la constitución (Artículo 8 y 9).
+    environment:
+      MARIADB_ROOT_PASSWORD: paradigmas123
+      MARIADB_DATABASE: bdgestion_mariadb_local
+      MARIADB_USER: paradigmas
+      MARIADB_PASSWORD: paradigmas123
+
+    # Mapeo de puertos: "PUERTO_HOST:PUERTO_CONTENEDOR".
+    #   - El host (tu Windows) expone el 13426.
+    #   - Adentro del contenedor, MariaDB sigue escuchando en el 3306 de
+    #     siempre. Por eso el DSN del compose dice `mariadb:3306`, y el DSN
+    #     local (php -S en tu máquina) dice `localhost:13426`.
+    ports:
+      - "13426:3306"
+
+    # Volumen nombrado: los datos sobreviven a `docker compose down`.
+    # Solo `docker compose down -v` los borra y fuerza a re-ejecutar
+    # db/init.sql sobre un volumen vacío (el "botón de pánico" del
+    # Artículo 6 de la constitución).
+    volumes:
+      - mariadbdata:/var/lib/mysql
+      # El script de inicialización se monta en la carpeta que la imagen
+      # oficial ejecuta la PRIMERA vez que arranca con el volumen vacío.
+      # Se monta en modo solo-lectura (:ro) para dejar claro que nadie
+      # lo modifica desde el contenedor.
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    # Healthcheck: Docker pregunta cada 10 segundos si MariaDB ya está
+    # lista para recibir conexiones. La API (Fase 6) usará este healthcheck
+    # con `depends_on: condition: service_healthy` para no arrancar antes
+    # de que la BD esté disponible.
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    # Política de reinicio: si el contenedor se cae, Docker lo vuelve a
+    # levantar automáticamente (salvo que lo hayas detenido a propósito).
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# VOLÚMENES NOMBRADOS
+# Docker los crea y los prefija con el nombre del proyecto (`mi_v1_programa_`)
+# para que no choquen con los del proyecto del curso.
+# ---------------------------------------------------------------------------
+volumes:
+  mariadbdata:
