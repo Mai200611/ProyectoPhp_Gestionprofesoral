@@ -28,7 +28,7 @@
       la sección de **Clarificaciones** de [2_spec.md](2_spec.md).
 - [x] Cada RF explica UNA cosa. Si uno necesita un "y" para entenderse, se
       partió en dos.
-- [ ] Los RF no mencionan tecnología ni nombres de clase: el QUÉ está
+- [x] Los RF no mencionan tecnología ni nombres de clase: el QUÉ está
       separado del CÓMO, que vive en [3_plan.md](3_plan.md).
 
 ## B. Medible — ¿se puede verificar?
@@ -74,9 +74,9 @@
       inventa uno.
 - [x] Los ejemplos de [6_contracts.md](6_contracts.md) usan datos que
       existen en [5_data_model.md](5_data_model.md).
-- [ ] [3_plan.md](3_plan.md) no nombra ningún archivo que ninguna tarea
+- [x] [3_plan.md](3_plan.md) no nombra ningún archivo que ninguna tarea
       construya, y ninguna tarea construye un archivo que el plan no liste.
-- [ ] El **Chequeo de constitución** de [3_plan.md](3_plan.md) está
+- [x] El **Chequeo de constitución** de [3_plan.md](3_plan.md) está
       completo: artículo por artículo, sin saltarse ninguno.
 
 
@@ -91,7 +91,7 @@
 - [x] Ningún documento anticipa una versión futura (Artículo 1 de la
       [constitución](../../1_constitution.md): lo que no pide esta versión, no se
       escribe).
-- [ ] Las dependencias que nombra [3_plan.md](3_plan.md) son exactamente
+- [x] Las dependencias que nombra [3_plan.md](3_plan.md) son exactamente
       las que permite la constitución.
 
 ---
@@ -102,7 +102,7 @@
 |---|---|
 | **Revisada por** | Sara Pabón González, Miguel Angel Hincapié |
 | **Fecha** | 2/10/2026 |
-| **Casillas en rojo** | Cuarta casilla del A., sexta y septima casilla del D., cuarta casilla del E. Aún no se han revisado por falta de revisión del archivo 3_plan.md|
+| **Casillas en rojo** | |
 | **Veredicto** | ⬜ En verde: puede empezar el código · ⬜ En rojo: vuelve a la spec |
 
 > Si el veredicto es rojo, anote aquí qué documento hay que corregir y por
