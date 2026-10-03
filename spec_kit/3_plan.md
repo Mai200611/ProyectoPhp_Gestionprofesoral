@@ -59,7 +59,7 @@
 │       ├── bootstrap.bundle.min.js
 │       └── estilos.css
 │
-└── api_facturas/
+└── api_GestionProfesoral/
     ├── Dockerfile
     ├── index.php
     │
@@ -137,7 +137,7 @@ HTTP + JSON
 
     ↓
 
-api_facturas/index.php
+api_GestionProfesoral/index.php
 (front controller de la API)
 
     ↓
@@ -813,7 +813,7 @@ La traducción de excepciones permanece en el controlador, como en el diseño or
 
 # 9. Front controller de la API
 
-`api_facturas/index.php` será el único punto de entrada de la API.
+`api_GestionProfesoral/index.php` será el único punto de entrada de la API.
 
 Su trabajo será:
 
@@ -858,7 +858,7 @@ El front conservará tres responsabilidades principales:
 | `index.php`       | Interpretar ruta y seleccionar vista | No arma SQL                     |
 | `vistas/*.php`    | Pintar HTML                          | No llaman directamente a la API |
 
-`cliente_api.php` será el equivalente al repositorio desde la perspectiva del front.
+`Usuario_api.php` será el equivalente al repositorio desde la perspectiva del front.
 
 Su responsabilidad será transformar la comunicación HTTP en una estructura sencilla para las vistas:
 
@@ -1242,7 +1242,7 @@ Servicios:
 
 ```text
 mariadb
-api-facturas
+api-GestionProfesoral
 front-php
 ```
 
@@ -1265,7 +1265,7 @@ y un volumen para conservar los datos.
 ## API
 
 ```text
-api-facturas
+api-GestionProfesoral
 ```
 
 Utilizará:
@@ -1307,7 +1307,7 @@ php -S 0.0.0.0:8020 index.php
 El front recibirá:
 
 ```text
-URL_API=http://api-facturas:8022
+URL_API=http://api-GestionProfesoral:8022
 ```
 
 y **no** recibirá:
@@ -1353,7 +1353,7 @@ La idea conserva la decisión del plan original: en v1 existe un solo motor y no
 El archivo:
 
 ```text
-api_facturas/servicios/ensamblador.php
+api_GestionProfesoral/servicios/ensamblador.php
 ```
 
 será responsable de conectar interfaces con implementaciones concretas.
@@ -1379,7 +1379,7 @@ Los controladores no deberán crear directamente repositorios concretos.
 Se mantendrá:
 
 ```text
-api_facturas/pruebas/prueba_capas.php
+api_GestionProfesoral/pruebas/prueba_capas.php
 ```
 
 La prueba podrá utilizar repositorios falsos.
