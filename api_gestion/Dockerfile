@@ -1,6 +1,0 @@
-FROM php:8.3-cli
-RUN docker-php-ext-install pdo_mysql
-WORKDIR /app
-COPY . .
-EXPOSE 8113
-CMD ["php", "-S", "0.0.0.0:8113", "index.php"]
