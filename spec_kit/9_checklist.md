@@ -22,76 +22,76 @@
 
 ## A. Claridad — ¿dice UNA sola cosa?
 
-- [ ] Ningún requisito usa palabras sin definir: *rápido, amigable,
+- [x] Ningún requisito usa palabras sin definir: *rápido, amigable,
       eficiente, correcto, adecuado, robusto*.
-- [ ] No queda ningún marcador `[NECESITA ACLARACIÓN: …]` sin resolver en
+- [x] No queda ningún marcador `[NECESITA ACLARACIÓN: …]` sin resolver en
       la sección de **Clarificaciones** de [2_spec.md](2_spec.md).
-- [ ] Cada RF explica UNA cosa. Si uno necesita un "y" para entenderse, se
+- [x] Cada RF explica UNA cosa. Si uno necesita un "y" para entenderse, se
       partió en dos.
-- [ ] Los RF no mencionan tecnología ni nombres de clase: el QUÉ está
+- [x] Los RF no mencionan tecnología ni nombres de clase: el QUÉ está
       separado del CÓMO, que vive en [3_plan.md](3_plan.md).
 
 ## B. Medible — ¿se puede verificar?
 
-- [ ] Cada criterio de aceptación de [2_spec.md](2_spec.md) dice un **valor
+- [x] Cada criterio de aceptación de [2_spec.md](2_spec.md) dice un **valor
       concreto**: un número, un código de estado o un texto exacto.
-- [ ] Cada criterio se puede comprobar con **un comando** de
+- [x] Cada criterio se puede comprobar con **un comando** de
       [7_quickstart.md](7_quickstart.md). Si no hay comando posible, no es
       criterio.
-- [ ] Los códigos de error están dichos por su número (400, 404, 422,
+- [x] Los códigos de error están dichos por su número (400, 404, 422,
       500), no como "responde con un error".
 
 ## C. Completitud — ¿falta algo?
 
-- [ ] Los RF cubren todo lo que promete el propósito: nada del alcance
+- [x] Los RF cubren todo lo que promete el propósito: nada del alcance
       quedó sin requisito.
-- [ ] [2_spec.md](2_spec.md) tiene su **NO incluye** explícito.
-- [ ] Cada entrada de [6_contracts.md](6_contracts.md) documenta sus
+- [x] [2_spec.md](2_spec.md) tiene su **NO incluye** explícito.
+- [x] Cada entrada de [6_contracts.md](6_contracts.md) documenta sus
       desenlaces de **ERROR**, no solo el camino feliz.
-- [ ] [5_data_model.md](5_data_model.md) trae los **datos exactos** de los
+- [x] [5_data_model.md](5_data_model.md) trae los **datos exactos** de los
       que dependen los comandos del smoke test.
-- [ ] **La versión tiene su front especificado**, no solo su API: hay
+- [x] **La versión tiene su front especificado**, no solo su API: hay
       requisitos de lo que la persona ve y hace, y [6_contracts.md](6_contracts.md)
       dice qué pantalla existe y qué le pide a la API (Artículo 1.1 de la
       [constitución](../../1_constitution.md)).
-- [ ] Está dicho **qué hace la pantalla cuando la API no responde** — no
+- [x] Está dicho **qué hace la pantalla cuando la API no responde** — no
       basta con el camino feliz.
-- [ ] Está dicho **qué hace la pantalla cuando no hay filas**, y que eso no
+- [x] Está dicho **qué hace la pantalla cuando no hay filas**, y que eso no
       es un error.
-- [ ] Cada decisión de [4_research.md](4_research.md) tiene al menos una
+- [x] Cada decisión de [4_research.md](4_research.md) tiene al menos una
       alternativa descartada con su razón.
 
 ## D. Coherencia — ¿los documentos dicen lo mismo?
 
-- [ ] Todo RF de [2_spec.md](2_spec.md) aparece en
+- [x] Todo RF de [2_spec.md](2_spec.md) aparece en
       [6_contracts.md](6_contracts.md).
-- [ ] Todo lo que promete [6_contracts.md](6_contracts.md) tiene una tarea
+- [x] Todo lo que promete [6_contracts.md](6_contracts.md) tiene una tarea
       que lo construye en [8_tasks.md](8_tasks.md).
-- [ ] Todo criterio de aceptación tiene su comando en
+- [x] Todo criterio de aceptación tiene su comando en
       [7_quickstart.md](7_quickstart.md), **con el mismo número**.
-- [ ] Cada pantalla de [6_contracts.md](6_contracts.md) §9 usa un endpoint
+- [x] Cada pantalla de [6_contracts.md](6_contracts.md) §9 usa un endpoint
       que existe en las secciones de arriba del mismo documento — y ninguna
       inventa uno.
-- [ ] Los ejemplos de [6_contracts.md](6_contracts.md) usan datos que
+- [x] Los ejemplos de [6_contracts.md](6_contracts.md) usan datos que
       existen en [5_data_model.md](5_data_model.md).
-- [ ] [3_plan.md](3_plan.md) no nombra ningún archivo que ninguna tarea
+- [x] [3_plan.md](3_plan.md) no nombra ningún archivo que ninguna tarea
       construya, y ninguna tarea construye un archivo que el plan no liste.
-- [ ] El **Chequeo de constitución** de [3_plan.md](3_plan.md) está
+- [x] El **Chequeo de constitución** de [3_plan.md](3_plan.md) está
       completo: artículo por artículo, sin saltarse ninguno.
 
 
 ## E. Alcance — ¿no se está anticipando?
 
-- [ ] Ningún documento nombra entidades, motores o pantallas fuera del
+- [x] Ningún documento nombra entidades, motores o pantallas fuera del
       alcance declarado en [2_spec.md](2_spec.md).
-- [ ] **Ninguna ruta es genérica**: no aparece `/api/{tabla}` ni nada que
+- [x] **Ninguna ruta es genérica**: no aparece `/api/{tabla}` ni nada que
       reciba el nombre del recurso como parámetro, ni en la API ni en el
       cliente del front (Artículo 10 de la
       [constitución](../../1_constitution.md)).
-- [ ] Ningún documento anticipa una versión futura (Artículo 1 de la
+- [x] Ningún documento anticipa una versión futura (Artículo 1 de la
       [constitución](../../1_constitution.md): lo que no pide esta versión, no se
       escribe).
-- [ ] Las dependencias que nombra [3_plan.md](3_plan.md) son exactamente
+- [x] Las dependencias que nombra [3_plan.md](3_plan.md) son exactamente
       las que permite la constitución.
 
 ---
@@ -100,8 +100,8 @@
 
 | | |
 |---|---|
-| **Revisada por** | *(nombre de quien firma)* |
-| **Fecha** | |
+| **Revisada por** | Sara Pabón González, Miguel Angel Hincapié |
+| **Fecha** | 2/10/2026 |
 | **Casillas en rojo** | |
 | **Veredicto** | ⬜ En verde: puede empezar el código · ⬜ En rojo: vuelve a la spec |
 
