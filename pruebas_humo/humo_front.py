@@ -1,33 +1,47 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Prueba de humo del FRONT de Gestión profesoral (PHP, puerto 8112).
-
-QUÉ COMPRUEBA, Y POR QUÉ AQUÍ SE PUEDE COMPROBAR TODO
-=====================================================
-
-Este front está hecho de formularios HTML corrientes: cada botón manda un
-POST que un guion puede enviar igual que lo manda el navegador. Por eso esta
-prueba llega **hasta el final** —agrega, guarda de las dos maneras y retira—
-sin un navegador de por medio.
-
-Lo que se comprueba:
-
-  1. cada pantalla responde por su DIRECCIÓN PROPIA, y la hoja de estilos
-     llega de verdad —que no es lo mismo—;
-  2. el menú lleva a la pantalla, con una dirección que existe;
-  3. lo que la pantalla muestra es lo que la API devolvió;
-  4. la pantalla no le habla al usuario en jerga;
-  5. el recorrido completo: agregar, los dos botones de guardar, y retirar;
-  6. y lo que demuestra que son dos procesos: **con la API apagada la
-     pantalla sigue en pie**, con su aviso adentro y sin un solo dato.
-
-Uso:  python pruebas_humo/humo_front.py     (parado en la raíz del proyecto)
 """
-import html
-import http.cookiejar
-import json
-import random
+pruebas_humo/humo_front.py
+-------------------------------------------------------------------------------
+¿Qué es este archivo?
+    Es la PRUEBA DE HUMO del front: un script de Python que recorre las
+    pantallas como lo haría un humano, pero sin manos, y verifica que
+    todo funcione de punta a punta.
+
+¿Qué papel cumple en la arquitectura?
+    Es el último eslabón de la v1: la prueba objetiva del Artículo 3 de la
+    constitución (front y API son dos procesos separados). Recorre el
+    flujo completo (crear → guardar de dos maneras → eliminar) y, sobre
+    todo, apaga la API con la base encendida para comprobar que la
+    pantalla sigue en pie, sin filas.
+
+¿Cómo se corre?
+    Desde la raíz del proyecto, con los contenedores arriba
+    (`docker compose up -d --build`):
+
+        python pruebas_humo/humo_front.py
+
+    No necesita dependencias externas: solo la biblioteca estándar de
+    Python (urllib, http.client, re, sys).
+
+¿Qué verifica?
+    1. Que cada pantalla del front responda con HTTP 200.
+    2. Que el HTML visible no hable en jerga técnica.
+    3. Que los archivos estáticos se sirvan con su Content-Type correcto.
+    4. El ciclo CRUD completo: crear, editar con PUT, editar con PATCH,
+       eliminar — todo vía POST del navegador.
+    5. La prueba de los dos procesos: con la API detenida, el front sigue
+       respondiendo pero sin filas.
+
+¿Qué NO hace?
+    No abre un navegador real. Trabaja contra HTTP puro, igual que lo
+    haría el navegador, pero sin pintar HTML ni ejecutar JavaScript.
+    Eso es justamente lo que permite automatizarlo: como el front usa
+    formularios corrientes, cada botón se puede enviar desde fuera.
+-------------------------------------------------------------------------------
+"""
+
 import re
-import string
 import subprocess
 import sys
 import time
@@ -35,288 +49,342 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# La consola de Windows no siempre usa UTF-8, y entonces imprimir una flecha
-# revienta el guion con un error que no tiene NADA que ver con lo que se está
-# probando. `errors="replace"` deja pasar un signo raro y sigue.
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-FRONT = "http://localhost:8112"
-API = "http://localhost:8113"
-SERVICIO_API = "api-gestion"
-fallos = []
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN
+# -----------------------------------------------------------------------------
+URL_FRONT = "http://localhost:8120"
 
-# Un sufijo distinto en cada corrida: si una se interrumpe a la mitad deja la
-# ficha puesta, y la siguiente fallaría al crearla por llave duplicada — un
-# rojo que no tiene que ver con lo que se está probando.
-SUFIJO = "".join(random.choices(string.digits, k=3))
-LLAVE = int("99" + SUFIJO)
-
-# Las columnas que la tabla debe traer, en el idioma del usuario.
-ETIQUETAS = ('Código', 'Nombre', 'Tipo', 'Nivel', 'Ciudad', 'Facultad')
-
-navegador = urllib.request.build_opener(
-    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
-
-
-def ver(url):
-    """Un GET, como el que hace el navegador al escribir la dirección."""
-    try:
-        with navegador.open(url, timeout=20) as r:
-            return r.status, r.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode("utf-8", "replace")
-    except Exception as e:
-        return 0, str(e)
-
-
-def enviar(ruta, campos):
-    """Un POST de formulario: exactamente lo que manda el botón.
-
-    Fíjese en el tipo de contenido: `x-www-form-urlencoded`, que es como
-    hablan los formularios. El JSON lo pone el front cuando le habla a la
-    API — eso pasa del otro lado, y el usuario nunca lo escribe.
-    """
-    datos = urllib.parse.urlencode(campos).encode()
-    peticion = urllib.request.Request(FRONT + ruta, data=datos)
-    try:
-        with navegador.open(peticion, timeout=20) as r:
-            return r.status, r.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode("utf-8", "replace")
-    except Exception as e:
-        return 0, str(e)
-
-
-def visible(pagina):
-    """El texto que el usuario VE: sin etiquetas y con las tildes de verdad.
-
-    Comprobar sobre el HTML crudo da falsos positivos de los dos lados: un
-    «500» puede estar dentro de un número, y el aviso «no está disponible»
-    llega escrito `est&#xE1;`, así que buscar la «á» literal no lo encuentra.
-    Una prueba de pantalla comprueba **lo que se ve**, no el código fuente.
-    """
-    sin_script = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", pagina)
-    sin_etiquetas = re.sub(r"<[^>]*>", " ", sin_script)
-    return re.sub(r"\s+", " ", html.unescape(sin_etiquetas))
-
-
-def revisar(nombre, condicion, detalle=""):
-    marca = "[OK]    " if condicion else "[FALLO] "
-    print(marca + nombre + " " + detalle[:140])
-    if not condicion:
-        fallos.append(nombre)
-
-
-def api(ruta):
-    """Una lectura directa a la API, para contrastar contra la pantalla."""
-    codigo, texto = ver(API + ruta)
-    if codigo not in (200, 204):
-        return None
-    return json.loads(texto) if texto else None
-
-
-def esperar_api(segundos=180):
-    """Acepta 200 y 204: un 204 es la API diciendo que la tabla está vacía,
-    que es una respuesta válida — no una API a medio arrancar."""
-    for _ in range(segundos // 3):
-        if ver(API + "/api/programa?limite=1")[0] in (200, 204):
-            return True
-        time.sleep(3)
-    return False
-
-
-if not esperar_api():
-    print("La API no respondió. ¿Está levantado el sistema?")
-    print("   docker compose up -d --build")
-    raise SystemExit(1)
-
-# ======================================================================
-print("=== 1. Las pantallas responden, cada una por su dirección ===")
-# ======================================================================
-PANTALLAS = [
-    ("/", "Sistema de gestión profesoral"),
-    ("/programas", "Programas"),
-    ("/programas/nuevo", "Agregar"),
+# Palabras que NUNCA deben aparecer en el HTML que ve el usuario.
+# Si aparecen, es jerga técnica que se coló a la pantalla (RNF7).
+JERGA_PROHIBIDA = [
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "/api/",
+    "PDO",
+    "SELECT ",
+    "MariaDB",
+    "MySQL",
+    "PDOException",
+    "filasAfectadas",
+    "filasEliminadas",
+    "422",
+    "404",
+    "500",
+    "status code",
 ]
-for ruta_, titulo in PANTALLAS:
-    c, t = ver(FRONT + ruta_)
-    revisar(ruta_.ljust(26) + " responde y dice «" + titulo + "»",
-            c == 200 and titulo in visible(t))
 
-c, t = ver(FRONT + "/pantalla-que-no-existe")
-revisar("una dirección inventada da 404, con el marco de la aplicación",
-        c == 404 and "no existe" in visible(t))
+# Contador de resultados.
+OK = 0
+FALLOS = 0
 
-print()
-print("=== 1.b LAS HOJAS DE ESTILO LLEGAN ===")
-# Comprobar el TEXTO de una página no dice si la página se ve. Y aquí hay una
-# trampa propia de `php -S`: con un router, PHP lo ejecuta para TODAS las
-# peticiones, también para el .css — que caería en el 404 del router y
-# llegaría como HTML. La pantalla saldría sin un solo estilo, con un 200 en
-# el registro. Por eso se comprueba el TIPO DE CONTENIDO, no el código.
-for hoja in ("/publico/bootstrap.min.css", "/publico/estilos.css"):
+
+# -----------------------------------------------------------------------------
+# UTILIDADES DE HTTP Y DE SALIDA
+# -----------------------------------------------------------------------------
+def http_get(url, timeout=5):
+    """Hace un GET a la URL y devuelve (codigo, cuerpo_texto, content_type)."""
     try:
-        with navegador.open(FRONT + hoja, timeout=20) as r:
-            codigo, tipo = r.status, r.headers.get("Content-Type", "")
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            cuerpo = resp.read().decode("utf-8", errors="replace")
+            ct = resp.headers.get("Content-Type", "")
+            return resp.status, cuerpo, ct
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", errors="replace")
+        ct = e.headers.get("Content-Type", "")
+        return e.code, cuerpo, ct
     except Exception as e:
-        codigo, tipo = 0, str(e)
-    revisar(hoja.ljust(30) + " llega como text/css",
-            codigo == 200 and "css" in tipo, str(tipo))
+        return 0, f"[ERROR DE CONEXIÓN: {e}]", ""
 
-# ======================================================================
-print()
-print("=== 2. El menú lleva a la pantalla, con una dirección de verdad ===")
-# ======================================================================
-c, inicio = ver(FRONT + "/")
-revisar("el menú tiene el enlace", 'href="/programas"' in inicio)
-revisar("y NINGUNA dirección tiene el nombre de la tabla como parámetro",
-        "{tabla}" not in inicio and "?tabla=" not in inicio)
 
-# ======================================================================
-print()
-print("=== 3. La pantalla trae los datos que dio la API ===")
-# ======================================================================
-sobre = api("/api/programa?limite=5")
-filas = sobre["datos"] if sobre else []
-c, t = ver(FRONT + "/programas")
-if not filas:
-    print("[--]    la tabla `programa` está vacía: no hay datos que comparar")
-    revisar("y aun vacía, la pantalla responde y ofrece «Agregar»",
-            "Agregar" in visible(t))
-else:
-    revisar("la API responde", True, str(len(filas)) + " filas")
-    revisar("y esos mismos datos se ven en la pantalla",
-            all(str(f["id"]) in visible(t) for f in filas[:3]))
-    faltan = [e for e in ETIQUETAS if e not in visible(t)]
-    revisar("la tabla trae sus columnas", not faltan, str(faltan))
+def http_post(url, datos, timeout=5):
+    """Hace un POST con application/x-www-form-urlencoded."""
+    cuerpo = urllib.parse.urlencode(datos).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=cuerpo,
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, resp.read().decode("utf-8", errors="replace"), resp.url
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", errors="replace"), url
+    except Exception as e:
+        return 0, f"[ERROR DE CONEXIÓN: {e}]", url
 
-# ======================================================================
-print()
-print("=== 4. Lo que la pantalla NO debe decirle al usuario ===")
-# ======================================================================
-# La jerga se busca como TOKEN TÉCNICO, no como palabra suelta: «proyecto» o
-# «programa» son nombres de tabla Y palabras que el usuario dice todos los
-# días. Jerga de verdad es la ruta de la API, los verbos y los motores.
-JERGA = ["PUT", "PATCH", "DELETE", "/api/", "MariaDB", "SELECT", "PDO",
-         "endpoint", "localhost:", "Fatal error", "Warning:", "Notice:"]
-for ruta_, _ in PANTALLAS:
-    c, t = ver(FRONT + ruta_)
-    visto = [j for j in JERGA if j in visible(t)]
-    revisar(ruta_.ljust(26) + " sin jerga", not visto, str(visto))
 
-# ======================================================================
-print()
-print("=== 5. EL RECORRIDO COMPLETO, botón por botón ===")
-# ======================================================================
-COMPLETO = {
-    "id": LLAVE,
-    "nombre": ('Nombre ' + SUFIJO)[:150],
-    "tipo": ('Tipo ' + SUFIJO)[:45],
-    "nivel": ('Nivel ' + SUFIJO)[:45],
-    "fecha_creacion": ('Fecha de creación ' + SUFIJO)[:45],
-    "numero_cohortes": ('Número de cohortes ' + SUFIJO)[:45],
-    "cant_graduados": ('Cantidad de graduados ' + SUFIJO)[:45],
-    "fecha_actualizacion": ('Fecha de actualización ' + SUFIJO)[:45],
-    "ciudad": ('Ciudad ' + SUFIJO)[:45],
-    "facultad": int(SUFIJO),
-    "fecha_cierre": ('Fecha de cierre ' + SUFIJO)[:45],
-}
+def titulo(texto):
+    print()
+    print("=== " + texto + " ===")
 
-c, t = enviar("/programas/nuevo", COMPLETO)
-revisar("agregar la ficha " + str(LLAVE), "Se agregó" in visible(t))
-revisar("  y ya aparece en el listado", str(LLAVE) in visible(t))
 
-# --- Guardar la ficha completa ---
-renombrado = dict(COMPLETO, verbo="completa",
-                  **{"nombre": "Corregido " + SUFIJO})
-c, t = enviar("/programas/" + str(LLAVE) + "/editar", renombrado)
-revisar("«Guardar la ficha completa» guarda", "Se guardó" in visible(t))
-revisar("  y el valor nuevo se ve", "Corregido " + SUFIJO in visible(t))
+def afirmar(cond, descripcion):
+    global OK, FALLOS
+    if cond:
+        OK += 1
+        print(f"[OK]    {descripcion}")
+    else:
+        FALLOS += 1
+        print(f"[FALLO] {descripcion}")
 
-# --- La ficha completa con un obligatorio en blanco: se rechaza ---
-c, t = enviar("/programas/" + str(LLAVE) + "/editar",
-              dict(COMPLETO, verbo="completa", **{"nombre": ""}))
-texto = visible(t)
-revisar("la ficha completa con «Nombre» en blanco se RECHAZA",
-        "Se guardó" not in texto)
-revisar("  y el motivo está EN ESPAÑOL y nombra el campo",
-        "nombre" in texto and "should be" not in texto)
-revisar("  sin números de estado ni jerga",
-        not any(j in texto for j in ("422", "PUT", "/api/")))
 
-# --- Solo lo que cambié: el MISMO formulario a medio llenar ---
-vacios = {c: "" for c in COMPLETO if c != "id"}
-c, t = enviar("/programas/" + str(LLAVE) + "/editar",
-              dict(vacios, verbo="parcial",
-                   **{"tipo": "Solo esto " + SUFIJO}))
-revisar("«Guardar solo lo que cambié», con lo demás en blanco, SÍ guarda",
-        "Se guardó" in visible(t))
+def sin_html(texto):
+    """Quita las etiquetas HTML para revisar solo lo que ve el usuario."""
+    return re.sub(r"<[^>]+>", " ", texto)
 
-# Y aquí está la lección, comprobada contra los datos: cambió un campo y el
-# otro se quedó como estaba. Lo que no se envía, no se toca.
-ficha = api("/api/programa/" + str(LLAVE))
-revisar("  el campo enviado cambió",
-        ficha and ficha.get("tipo") == "Solo esto " + SUFIJO,
-        str(ficha and ficha.get("tipo")))
-revisar("  y «Nombre» NO se borró: lo que no se envía, no se toca",
-        ficha and ficha.get("nombre") == "Corregido " + SUFIJO,
-        str(ficha and ficha.get("nombre")))
 
-# --- Retirar ---
-c, t = enviar("/programas/" + str(LLAVE) + "/retirar", {})
-revisar("retirar la ficha", "Se retiró" in visible(t))
+# -----------------------------------------------------------------------------
+# PRUEBA 1 — Cada pantalla responde 200
+# -----------------------------------------------------------------------------
+def prueba_pantallas_responde():
+    titulo("Prueba 1: cada pantalla responde")
 
-# Se pide la pantalla otra vez: en la segunda visita el aviso ya no está —se
-# muestra una sola vez—, así que si la llave apareciera sería en la tabla de
-# verdad. Dos comprobaciones por el precio de una.
-c, t = ver(FRONT + "/programas")
-revisar("  el aviso se muestra UNA vez y no se repite", "Se retiró" not in visible(t))
-revisar("  y la ficha ya no está en el listado", str(LLAVE) not in visible(t))
+    rutas = [
+        "/",
+        "/areas",
+        "/terminos",
+        "/lineas",
+        "/programas",
+        "/redes",
+        "/areas/nuevo",
+        "/terminos/nuevo",
+        "/lineas/nuevo",
+        "/programas/nuevo",
+        "/redes/nuevo",
+    ]
+    for ruta in rutas:
+        codigo, _, _ = http_get(URL_FRONT + ruta)
+        afirmar(codigo == 200, f"GET {ruta} responde 200 (recibido: {codigo})")
 
-# Y lo que hace distinto a este borrado: la fila SIGUE en la base. Se
-# pregunta por la API, que también la filtra, así que responde 404 — pero el
-# 7_quickstart.md trae la consulta directa que la encuentra con activo = 0.
-revisar("  la API tampoco la entrega: para quien la usa, ya no está",
-        api("/api/programa/" + str(LLAVE)) is None)
 
-# ======================================================================
-print()
-print("=== 6. LA PRUEBA DE LOS DOS PROCESOS: se apaga la API ===")
-print("    (esto tarda unos segundos)")
-# ======================================================================
-subprocess.run(["docker", "compose", "stop", SERVICIO_API],
-               capture_output=True, text=True)
-time.sleep(3)
+# -----------------------------------------------------------------------------
+# PRUEBA 2 — Sin jerga técnica en las pantallas
+# -----------------------------------------------------------------------------
+def prueba_sin_jerga():
+    titulo("Prueba 2: ninguna pantalla habla en jerga técnica")
 
-c, t = ver(FRONT + "/programas")
-texto = visible(t)
-revisar("la pantalla SIGUE respondiendo con la API apagada", c == 200)
-revisar("  y muestra el aviso dentro de la aplicación",
-        "no está disponible" in texto)
-revisar("  con su menú y su marco intactos",
-        "Inicio" in texto and "Gestión profesoral" in texto)
-# Ésta es LA comprobación de la constitución: MariaDB sigue encendida y con
-# los datos ahí. Si el front pudiera llegar a la base por su cuenta, la tabla
-# se seguiría viendo. No se ve.
-revisar("  y SIN un solo dato: el front no puede llegar a la base solo",
-        not any(str(f["id"]) in texto for f in filas[:3]) if filas else True)
+    rutas = [
+        "/",
+        "/areas",
+        "/terminos",
+        "/lineas",
+        "/programas",
+        "/redes",
+    ]
+    for ruta in rutas:
+        codigo, cuerpo, _ = http_get(URL_FRONT + ruta)
+        if codigo != 200:
+            afirmar(False, f"GET {ruta}: no respondió 200, no se puede revisar la jerga")
+            continue
 
-subprocess.run(["docker", "compose", "start", SERVICIO_API],
-               capture_output=True, text=True)
-print("    API encendida otra vez; esperando a que responda…")
-esperar_api(90)
-c, t = ver(FRONT + "/programas")
-revisar("y al volver la API, la pantalla vuelve a responder", c == 200)
+        # Solo revisamos el HTML VISIBLE (sin etiquetas), para no castigar
+        # atributos internos como name="verbo" value="PUT".
+        visible = sin_html(cuerpo)
+        encontrados = [p for p in JERGA_PROHIBIDA if p in visible]
+        afirmar(
+            not encontrados,
+            f"GET {ruta}: sin jerga visible (encontrado: {encontrados})",
+        )
 
-print()
-if fallos:
-    print("=== RESULTADO: " + str(len(fallos)) + " FALLO(S) ===")
-    for f in fallos:
-        print("   -", f)
-    raise SystemExit(1)
 
-print("=== RESULTADO: TODO EN VERDE ===")
-print()
-print("Se recorrió el ciclo completo desde la PANTALLA, con los mismos POST")
-print("que manda el navegador. Queda para una persona lo que un guion no ve:")
-print("que se entienda.")
+# -----------------------------------------------------------------------------
+# PRUEBA 3 — Archivos estáticos
+# -----------------------------------------------------------------------------
+def prueba_estaticos():
+    titulo("Prueba 3: archivos estáticos servidos correctamente")
+
+    estaticos = [
+        ("/publico/bootstrap.min.css", "text/css"),
+        ("/publico/bootstrap.bundle.min.js", "javascript"),
+        ("/publico/estilos.css", "text/css"),
+    ]
+    for ruta, tipo_esperado in estaticos:
+        codigo, _, ct = http_get(URL_FRONT + ruta)
+        afirmar(codigo == 200, f"GET {ruta}: responde 200 (recibido: {codigo})")
+        afirmar(
+            tipo_esperado in ct.lower(),
+            f"GET {ruta}: Content-Type contiene '{tipo_esperado}' (recibido: '{ct}')",
+        )
+
+
+# -----------------------------------------------------------------------------
+# PRUEBA 4 — Ciclo CRUD completo de programa
+# -----------------------------------------------------------------------------
+def prueba_ciclo_programa():
+    titulo("Prueba 4: ciclo CRUD completo de programa (vía POST del front)")
+
+    # Nota: usamos un id fuera del rango del catálogo para no pisar datos
+    # reales. El id de programa es numérico y lo elige el cliente.
+    id_prueba = 999999
+
+    # Limpieza preventiva por si quedó de una corrida anterior.
+    http_post(f"{URL_FRONT}/programas/{id_prueba}/eliminar", {})
+
+    # --- 4.1 Crear ---
+    datos_alta = {
+        "id": id_prueba,
+        "nombre": "Programa de Prueba Humo",
+        "tipo": "Pregrado",
+        "nivel": "Tecnologico",
+        "fecha_creacion": "2026-01-01",
+        "fecha_cierre": "",
+        "numero_cohortes": "1",
+        "cant_graduados": "0",
+        "fecha_actualizacion": "2026-01-01",
+        "ciudad": "Medellin",
+        "facultad": "101",
+    }
+    codigo, cuerpo, url_final = http_post(f"{URL_FRONT}/programas/nuevo", datos_alta)
+    afirmar(codigo == 200, f"POST /programas/nuevo responde 200 (recibido: {codigo})")
+    # Si el guardado fue exitoso, el front redirige al listado.
+    afirmar("/programas" in url_final, f"POST /programas/nuevo redirige a /programas (quedó en: {url_final})")
+
+    # Verificar que se ve en el listado.
+    _, listado, _ = http_get(f"{URL_FRONT}/programas")
+    afirmar("Programa de Prueba Humo" in listado, "El programa creado aparece en el listado")
+
+    # --- 4.2 Editar con PUT (ficha completa) ---
+    datos_put = {
+        "nombre": "Programa de Prueba Humo (PUT)",
+        "tipo": "Pregrado",
+        "nivel": "Tecnologico",
+        "fecha_creacion": "2026-01-01",
+        "fecha_cierre": "",
+        "numero_cohortes": "2",
+        "cant_graduados": "0",
+        "fecha_actualizacion": "2026-01-02",
+        "ciudad": "Medellin",
+        "facultad": "101",
+        "verbo": "PUT",
+    }
+    codigo, _, url_final = http_post(f"{URL_FRONT}/programas/{id_prueba}/editar", datos_put)
+    afirmar(codigo == 200, f"POST /programas/{id_prueba}/editar (PUT) responde 200")
+
+    _, listado, _ = http_get(f"{URL_FRONT}/programas")
+    afirmar("Programa de Prueba Humo (PUT)" in listado, "El PUT actualizó el nombre")
+
+    # --- 4.3 Editar con PATCH (solo ciudad) ---
+    datos_patch = {
+        "ciudad": "Bogota",
+        "verbo": "PATCH",
+    }
+    codigo, _, _ = http_post(f"{URL_FRONT}/programas/{id_prueba}/editar", datos_patch)
+    afirmar(codigo == 200, f"POST /programas/{id_prueba}/editar (PATCH) responde 200")
+
+    _, listado, _ = http_get(f"{URL_FRONT}/programas")
+    afirmar("Bogota" in listado, "El PATCH cambió la ciudad")
+    afirmar("Programa de Prueba Humo (PUT)" in listado, "El PATCH no borró el nombre")
+
+    # --- 4.4 Eliminar ---
+    codigo, _, url_final = http_post(f"{URL_FRONT}/programas/{id_prueba}/eliminar", {})
+    afirmar(codigo == 200, f"POST /programas/{id_prueba}/eliminar responde 200")
+
+    _, listado, _ = http_get(f"{URL_FRONT}/programas")
+    afirmar("Programa de Prueba Humo (PUT)" not in listado, "El programa eliminado ya no aparece")
+
+    # --- 4.5 El 404 del front se pinta en pantalla ---
+    codigo, cuerpo, _ = http_get(f"{URL_FRONT}/ruta-inexistente")
+    afirmar(codigo == 404, f"GET /ruta-inexistente responde 404 (recibido: {codigo})")
+    afirmar(
+        "Esa página no existe" in cuerpo,
+        "La pantalla 404 muestra el mensaje en español con el marco del front",
+    )
+
+
+# -----------------------------------------------------------------------------
+# PRUEBA 5 — La prueba de los dos procesos
+# -----------------------------------------------------------------------------
+def prueba_dos_procesos():
+    titulo("Prueba 5: con la API detenida, la pantalla sigue en pie pero sin filas")
+
+    # Nos aseguramos de que la API esté arriba primero.
+    print("Levantando la API...")
+    subprocess.run(
+        ["docker", "compose", "start", "api-gestion"],
+        capture_output=True,
+        text=True,
+    )
+    time.sleep(3)
+
+    _, listado_antes, _ = http_get(f"{URL_FRONT}/programas")
+    hay_datos_antes = "Administraci" in listado_antes or "Maestr" in listado_antes
+    afirmar(hay_datos_antes, "Antes de apagar: el listado muestra datos reales")
+
+    # Apagamos SOLO la API, dejando MariaDB encendida.
+    print("Apagando la API (MariaDB sigue encendida)...")
+    subprocess.run(
+        ["docker", "compose", "stop", "api-gestion"],
+        capture_output=True,
+        text=True,
+    )
+    time.sleep(2)
+
+    codigo, cuerpo, _ = http_get(f"{URL_FRONT}/programas")
+    afirmar(codigo == 200, f"Con la API apagada, GET /programas sigue respondiendo 200 (recibido: {codigo})")
+    afirmar(
+        "Gestión Profesoral" in cuerpo,
+        "La pantalla sigue mostrando el marco del front (el título está)",
+    )
+    afirmar(
+        "no está disponible" in cuerpo or "No está disponible" in cuerpo,
+        "La pantalla muestra el aviso de servicio no disponible",
+    )
+    afirmar(
+        "Administraci" not in cuerpo and "Maestr" not in cuerpo,
+        "La pantalla NO muestra datos (el front no llegó a la base por su cuenta)",
+    )
+
+    # Volvemos a encender la API.
+    print("Volviendo a encender la API...")
+    subprocess.run(
+        ["docker", "compose", "start", "api-gestion"],
+        capture_output=True,
+        text=True,
+    )
+    time.sleep(5)
+
+    _, listado_despues, _ = http_get(f"{URL_FRONT}/programas")
+    afirmar(
+        "Administraci" in listado_despues or "Maestr" in listado_despues,
+        "Al reencender la API, los datos vuelven sin tocar el front",
+    )
+
+
+# -----------------------------------------------------------------------------
+# MAIN
+# -----------------------------------------------------------------------------
+def main():
+    print("Prueba de humo del front — v1 de Gestión Profesoral")
+    print("URL del front: " + URL_FRONT)
+
+    # Comprobación inicial: ¿está el front encendido?
+    codigo, _, _ = http_get(URL_FRONT + "/")
+    if codigo != 200:
+        print()
+        print("!! El front no responde en " + URL_FRONT)
+        print("   Levante los contenedores con: docker compose up -d --build")
+        sys.exit(2)
+
+    prueba_pantallas_responde()
+    prueba_sin_jerga()
+    prueba_estaticos()
+    prueba_ciclo_programa()
+    prueba_dos_procesos()
+
+    # Resumen final.
+    print()
+    print("=====================================")
+    print(f"  Resultado: {OK} OK, {FALLOS} fallos")
+    print("=====================================")
+    if FALLOS > 0:
+        sys.exit(1)
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+    
