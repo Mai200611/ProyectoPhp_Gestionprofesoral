@@ -80,6 +80,7 @@ function redirigir_con(string $ruta, ?string $mensaje = null): void
     if ($mensaje !== null) {
         $_SESSION['aviso'] = $mensaje;
     }
+    http_response_code(302);
     header('Location: ' . $ruta);
     exit;
 }
