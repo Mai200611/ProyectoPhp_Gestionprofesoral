@@ -1,4 +1,4 @@
-# Proyecto de aula — Módulo: Gestión Profesoral
+iqe# Proyecto de aula — Módulo: Gestión Profesoral
 
 > **Base de datos:** `gestion_profesoral` · **19 tablas** (16 del módulo +
 > 3 de gestión de usuarios) · Caso diseñado por: Carlos Arturo Castro Castro.
