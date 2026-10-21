@@ -1,6 +1,6 @@
-# Quickstart — Versión 1: catálogo de punta a punta
+# Quickstart — Versión 2: tablas con FK y maestro-detalle
 
-> **Versión 1** · Validación rápida de la v1 ya construida. Si aún no hay
+> **Versión 2** · Validación rápida de la v2 ya construida. Si aún no hay
 > nada, empiece por [8_tasks.md](8_tasks.md).
 
 ---
@@ -18,7 +18,7 @@ Eso deja corriendo tres cosas:
 |---|---|---|
 | **La pantalla** | <http://localhost:8020> | Por donde se usa el sistema |
 | La API | <http://localhost:8022> | JSON; el front habla con ella |
-| phpMyAdmin | <http://localhost:8101> | Para mirar la base por dentro |
+| MariaDB |localhost:13326 |	La base de datos (si se quiere mirar por dentro) |
 
 No hay venv ni dependencias que instalar: **PHP no necesita nada más**.
 Empiece por el 8020 — que es como lo va a ver alguien que no programó esto.
@@ -35,106 +35,134 @@ cd api_gestion
 php -S localhost:8113 index.php
 ```
 
-## 2. Smoke test de la API (criterios 1 a 6)
+## 2. Smoke test de la API (criterios 1 a 8)
 ```
-# 1. Diagnóstico (y de paso: edite el mensaje en index.php, guarde y
-#    refresque — el cambio aparece SIN reiniciar nada: PHP reinterpreta)
-curl http://localhost:8022/
+# 1. Diagnóstico y los 16 recursos
+curl.exe http://localhost:8022/
 
-# 2. Listar — los 191 programas, y el query string en acción
-curl http://localhost:8022/api/programa                 # total: 191
-curl "http://localhost:8022/api/programa?limite=3"       # total: 3
+# 2. La -V1 sigue funcionando
+curl.exe http://localhost:8022/api/programa?limite=3
 
-# 3. Obtener uno / inexistente (parámetro de ruta)
-curl http://localhost:8022/api/programa/1     # 200 Programa con id 1
-curl -i http://localhost:8022/api/programa/9999 # 404
+# 3. Los 11 recursos nuevos listan
+curl.exe http://localhost:8022/api/docente?limite=2
+curl.exe http://localhost:8022/api/estudios_realizados?limite=2
+curl.exe http://localhost:8022/api/reconocimiento?limite=2
 
-# 4. Ciclo con los 5 verbos
-curl -X POST http://localhost:8022/api/programa -H "Content-Type: application/json" `
-     -d '{\"id\":9999,\"nombre\":\"Programa Test\",\"tipo\":\"Pregrado\",\"nivel\":\"Tecnologico\",\"fecha_creacion\":\"2026-01-01\",\"numero_cohortes\":\"1\",\"cant_graduados\":\"0\",\"fecha_actualizacion\":\"2026-01-01\",\"ciudad\":\"Medellin\",\"facultad\":101,\"fecha_cierre\":null}'
-curl -X PUT http://localhost:8022/api/programa/9999 -H "Content-Type: application/json" `
-     -d '{\"nombre\":\"Programa Test Actualizado\",\"tipo\":\"Pregrado\",\"nivel\":\"Tecnologico\",\"fecha_creacion\":\"2026-01-01\",\"numero_cohortes\":\"2\",\"cant_graduados\":\"0\",\"fecha_actualizacion\":\"2026-01-02\",\"ciudad\":\"Medellin\",\"facultad\":101,\"fecha_cierre\":null}' # reemplazo COMPLETO
-curl -X PATCH http://localhost:8022/api/programa/9999 -H "Content-Type: application/json" `
-     -d '{\"ciudad\":\"Bogota\"}'                             # parcial: solo la ciudad
-curl http://localhost:8022/api/programa/9999    # nombre Programa Test Actualizado, ciudad = Bogota
-curl -X DELETE http://localhost:8022/api/programa/9999
-curl -i -X DELETE http://localhost:8022/api/programa/9999   # 404 (ya no existe)
+# 4. Llaves generadas por la base (estudios_realizados)
+     # 1. Crear un estudio sin mandar 'id'
+     curl.exe -X POST http://localhost:8022/api/estudios_realizados `
+       -H "Content-Type: application/json" `
+       -d '{\"titulo\":\"Prueba Quickstart\",\"universidad\":\"UIS\",\"tipo\":\"Pregrado\",\"cedula\":\"123\"}'
+     
+     # 2. La respuesta debe traer un "id" (ej. 100). Guárdelo.
+     # 3. Consultar ese id:
+     curl.exe http://localhost:8022/api/estudios_realizados/100
+     
+     # 4. Un id no numérico da 400:
+     curl.exe -i http://localhost:8022/api/estudios_realizados/abc
 
-# 4b. La diferencia PUT vs PATCH — el MISMO body, distinto veredicto
-curl -i -X PUT http://localhost:8022/api/programa/1 -H "Content-Type: application/json" `
-     -d '{\"ciudad\":\"Bogota\"}'     # 422: a PUT le faltan nombre, tipo, nivel, etc.
-curl -i -X PATCH http://localhost:8022/api/programa/1 -H "Content-Type: application/json" `
-     -d '{\"ciudad\":\"Bogota\"}'     # 200: PATCH acepta el subconjunto
+#5. Los tres rechazos de integridad (409)
+     # A. Llave duplicada (cédula existente)
+     curl.exe -i -X POST http://localhost:8022/api/docente `
+       -H "Content-Type: application/json" `
+       -d '{\"cedula\":\"123\",\"nombre_completo\":\"Otro\"}'
+     # Esperado: 409
+     
+     # B. FK que no existe (cédula inventada)
+     curl.exe -i -X POST http://localhost:8022/api/estudios_realizados `
+       -H "Content-Type: application/json" `
+       -d '{\"titulo\":\"Prueba\",\"universidad\":\"UIS\",\"tipo\":\"Pregrado\",\"cedula\":\"999999\"}'
+     # Esperado: 409
+     
+     # C. Borrar docente con dependencias
+     curl.exe -i -X DELETE http://localhost:8022/api/docente/123
+     # Esperado: 409
 
-# 5. La validación como frontera — nunca llega a la BD
-curl -i -X POST http://localhost:8022/api/programa -H "Content-Type: application/json" `
-     -d '{\"id\":0,\"nombre\":\"\",\"tipo\":\"\",\"nivel\":\"\",\"fecha_creacion\":\"\",\"numero_cohortes\":\"\",\"cant_graduados\":\"\",\"fecha_actualizacion\":\"\",\"ciudad\":\"\",\"facultad\":-1}' # 422 con errores[]
-curl -i -X POST http://localhost:8022/api/programa -H "Content-Type: application/json" `
-     -d '{\"id\":1,\"nombre\":\"Dup\",\"tipo\":\"Pregrado\",\"nivel\":\"Tecnologico\",\"fecha_creacion\":\"2026-01-01\",\"numero_cohortes\":\"1\",\"cant_graduados\":\"0\",\"fecha_actualizacion\":\"2026-01-01\",\"ciudad\":\"Medellin\",\"facultad\":101}' # 500 (PK duplicada)
+# 6. Crear docente con detalle (maestro-detalle)
 
-# extra: PATCH body vacío y límite inválido (reglas de negocio -> 400)
-curl -i -X PATCH http://localhost:8022/api/programa/1 -H "Content-Type: application/json" -d '{}'
-curl -i "http://localhost:8022/api/programa?limite=0"
+     curl.exe -X POST http://localhost:8022/api/docente `
+       -H "Content-Type: application/json" `
+       -d '{
+         \"cedula\":\"999\",
+         \"nombre_completo\":\"Docente Prueba\",
+         \"linea_investigacion_principal\": 1,
+         \"estudios\": [
+           {\"titulo\":\"Ingeniería\",\"universidad\":\"UIS\",\"tipo\":\"Pregrado\"},
+           {\"titulo\":\"Maestría\",\"universidad\":\"UNAL\",\"tipo\":\"Maestría\"}
+         ]
+       }'
+
+## 7. El docente no tiene PATCH, y POST inválido da 422
+     # PATCH no permitido
+     curl.exe -i -X PATCH http://localhost:8022/api/docente/999 `
+       -H "Content-Type: application/json" `
+       -d '{\"nombre_completo\":\"Nuevo Nombre\"}'
+     # Esperado: 405
+     
+     # POST inválido (falta nombre)
+     curl.exe -i -X POST http://localhost:8022/api/docente `
+       -H "Content-Type: application/json" `
+       -d '{\"cedula\":\"888\"}'
+     # Esperado: 422
+# 8.Borrar docente sin dependencias da 200
+# Crear un docente sin estudios
+curl.exe -X POST http://localhost:8022/api/docente `
+  -H "Content-Type: application/json" `
+  -d '{\"cedula\":\"777\",\"nombre_completo\":\"Sin Dependencias\"}'
+
+# Borrarlo
+curl.exe -i -X DELETE http://localhost:8022/api/docente/777
 ```
-
-6. Prueba de capas (sin MariaDB): un script que instancie ServicioPrograma con un repositorio falso en memoria que implemente IRepositorioPrograma y verifique crear/listar/eliminar — si funciona, las capas quedaron bien cortadas (8_tasks.md Fase 4). Se corre con php a secas (dentro o fuera del contenedor):
-```
-docker compose exec api-gestion php pruebas/prueba_capas.php
-```
-## 3. La pantalla (criterios 7 a 10)
+## 3. La pantalla (criterios 9 a 14)
 
 ### 3.1 Automático
 ```
 python pruebas_humo/humo_front.py
 ```
-Recorre todo: que cada pantalla responda por su dirección, que muestre lo que la API devolvió, que no hable en jerga, el ciclo completo con los dos botones de guardar, y la prueba de apagar la API. Termina en verde o dice exactamente qué falló.
-
-Que un guion pueda hacer el recorrido completo es una ventaja de haber hecho el front con formularios corrientes: cada botón manda un POST que se puede enviar desde fuera del navegador. Con un front de los que llevan el estado en el navegador, esta parte habría que hacerla a mano.
-
 ### 3.2 A mano, que es lo que un guion no ve
-Abra http://localhost:8020 y haga esto leyendo lo que dice la pantalla. Lo que se juzga aquí no es si funciona —eso ya lo dijo el guion— sino si se entiende:
+Abra ```http://localhost:8020``` y compruebe:
 
-1. El menú. Desde el inicio se llega a los catálogos con un clic, y la dirección que queda en la barra es en plural (ej. /programas): se puede guardar como marcador y mandar por correo.
+1. Criterio 9: Los servicios se pueden probar con repositorios falsos.
+docker compose exec api-gestion php pruebas/prueba_capas.php
+Esperado: debe terminar en verde, sin base de datos.
 
-2. El listado. Están los registros con sus respectivas columnas y campos principales.
+2. Criterio 10: Todas las pantallas responden y se ven con estilos.
 
-3. Agregar. Cree un registro nuevo. Vuelve al listado con el aviso verde y la ficha nueva.
+- Abra ```http://localhost:8020/docentes``` (y las demás).
+- Verifique que las tablas tienen bordes, el menú es oscuro, y el CSS carga bien.
+- Abra http://localhost:8020/publico/estilos.css: debe devolver CSS, no una página HTML.
+Vaya a una ruta inventada ```(ej. http://localhost:8020/no-existe)```: debe mostrar «Esa página no existe» con el menú arriba.
 
-4. El formulario a medio llenar, con cada botón. Entre a editar un registro y borre un campo obligatorio (como el nombre):
+3. Criterio 11: El recorrido de una ficha cualquiera (ej. estudios):
 
-- con «Guardar la ficha completa» → lo rechaza, y el motivo está en español;
+Agregar un estudio (el desplegable de docente debe mostrar cédulas y nombres).
+Editar: «Guardar la ficha completa» y luego «Guardar solo lo que cambié».
+Intentar eliminar un docente con estudios: debe salir un aviso en español («No se puede eliminar el docente porque hay otras fichas que dependen de ella»), sin números.
 
-- con «Guardar solo lo que cambié», dejando solo otro campo (ej. ciudad) → guarda, y el nombre no se borró.
+4. Criterio 12: Crear un docente con dos estudios desde la pantalla.
 
-  Ése es el corazón de la versión: el mismo formulario, dos resultados, y la diferencia está en qué se envía.
+Vaya a /docentes/nuevo, llene los datos y los dos estudios.
+Al guardar, debe ir a la pantalla de detalle (/docentes/{cedula}).
+Verifique que el desplegable de línea de investigación principal muestra solo las líneas existentes.
 
-5. La clave primaria no se deja cambiar al editar. Es la identidad de la ficha.
+5. Criterio 13: Ninguna pantalla habla en jerga.
 
-6. Eliminar: pregunta antes, y después desaparece.
+Busque con Ctrl+F en cualquier pantalla: PUT, PATCH, 409, /api/, PDO, SELECT, MariaDB, cedula, idlinea. No deben aparecer en el texto visible.
 
-7. La prueba de los dos procesos. Con la base de datos encendida, apague solo la API:
-  ```
-  docker compose stop api-gestion
-  ```
-Refresque /programas. La pantalla sigue en pie, con su menú, y con un aviso de que el servicio no está disponible — y sin una sola fila. Los datos siguen ahí, en MariaDB, a un puerto de distancia: si aparecieran, sería porque el front llegó a la base por su cuenta. No aparecen.
-```
-docker compose start api-gestion
-```
+6. Criterio 14: La prueba de los dos procesos.
 
-Espere unos segundos, refresque, y los datos vuelven sin tocar nada.
-
+```docker compose stop api-gestion```
+Refresque /docentes. La pantalla sigue en pie, muestra el aviso de «servicio no disponible» y no muestra ninguna fila.
+Luego: ```docker compose start api-gestion```
 
 ## 4. Si algo falla
 
 | Síntoma | Causa probable |
 |---|---|
-| `could not find driver` | Falta la extensión `pdo_mysql` (en Docker ya viene; local: habilítela en `php.ini`) |
-| 500 en todos los endpoints | MariaDB apagada o DSN mal apuntado (Docker: host `mariadb`; local: `localhost:13326`) |
-| 204 donde esperaba los 191 programas | La tabla está vacía: `docker compose down -v` y `up -d` recargan `db/init.sql` |
-| El `LIMIT` falla con error de sintaxis | El `:limite` se enlazó como string — debe ser `bindValue(..., PDO::PARAM_INT)` ([3_plan.md](3_plan.md) §4.4) |
-| PATCH con el mismo valor responde 404 | Falta `PDO::MYSQL_ATTR_FOUND_ROWS => true` en la conexión: sin él, MariaDB reporta 0 filas cuando el valor no cambió ([3_plan.md](3_plan.md) §4.4) |
-| Edité un `.php` y no veo el cambio | Caché del navegador: fuerce con Ctrl+F5 (PHP siempre reinterpreta; el navegador a veces no) |
-| Puerto 8020, 8022 o 13326 ocupado | Otro proyecto del curso está corriendo — apáguelo (`docker compose down` en ESE proyecto) |
-| La pantalla abre pero dice «El servicio no está disponible» | La API está caída, o `URL_API` apunta mal. Dentro de Docker debe ser `http://api-gestion:8022` — el **nombre del servicio**, nunca `localhost` (allí `localhost` es el contenedor del front) |
-| La pantalla se ve sin estilos (letra con serifas, todo pegado a la izquierda) | El router se está tragando los archivos estáticos. Con `php -S … index.php`, el router se ejecuta para **todas** las peticiones, incluidas las de `/publico/`: hay que **devolver `false`** cuando el archivo existe en el disco ([3_plan.md](3_plan.md) §4.7). Compruébelo abriendo <http://localhost:8020/publico/estilos.css>: si sale una página HTML en vez del CSS, es esto |
-| El aviso verde sale dos veces, o refrescar vuelve a guardar | Falta la redirección después de guardar (`redirigir_con`): sin ella, refrescar reenvía el formulario ([4_research.md](4_research.md) D12) |
+| `500` en todos los endpoints | MariaDB apagada o el DSN mal apuntado en el compose. |
+| Un `500` en vez de `409` | El archivo `errores_de_integridad.php` no está traduciendo el código de error del motor (`1062`, `1452`, `1451`). |
+| El docente no devuelve `estudios` al crearlo | El repositorio no está llamando al procedimiento almacenado o no está leyendo el JSON de salida (`@resultado`). |
+| El `PATCH` del docente da `200` en vez de `405` | El enrutador (`api_gestion/index.php`) tiene una rama `PATCH` para docente que no debería existir. |
+| El desplegable de FK no carga | El front no está llamando a las funciones `listar_*` (ej. `listar_docentes()`) antes de pintar el formulario. |
+| `204` donde esperaba registros | La tabla está vacía. Ejecute `docker compose down -v` y luego `up -d` para recargar `db/init.sql` (borra la base actual). |
+| `Warning: require_once(...)` en la API | La ruta de un `require_once` está mal, o el archivo no se guardó. Verifique que todos los archivos de las interfaces y modelos existan en sus carpetas. |
