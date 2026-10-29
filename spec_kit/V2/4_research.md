@@ -1,201 +1,136 @@
-# Investigación y decisiones — Versión 1: area_conocimiento, termino_clave, linea_investigacion, programa y red de punta a punta
+# Investigación y decisiones — Versión 2
 
-> **Versión 1** · **Lectura opcional** (el porqué de las decisiones del plan,
+> **Versión 2** · **Lectura opcional** (el porqué de las decisiones del plan,
 > con las alternativas que se evaluaron y descartaron). Complementa a
 > [3_plan.md](3_plan.md); el orden de trabajo está en [8_tasks.md](8_tasks.md).
 
 ---
 
-## D1 — PHP puro: sin framework y sin Composer
+## D1 — El rechazo del motor sale como 409, no como 500
 
-**Alternativas descartadas:** Slim 4 (micro-framework con routing PSR-7) y
-Laravel (framework completo con ORM).
-**Decisión:** PHP "vanilla" — front controller propio, PDO directo, cero
-dependencias.
-**Por qué:** el objetivo es aprender **PHP y arquitectura**, no un framework.
-Laravel esconde exactamente lo que el curso quiere mostrar (el SQL, el
-enrutamiento, la validación); Slim es razonable pero mete Composer, `vendor/`
-y estándares PSR que compiten por la atención del estudiante. Escribir el
-router de ~60 líneas y la validación a mano ES el contenido. **Precio
-asumido:** características gratis que no tendremos (middleware, DI container,
-docs automáticas) — ninguna es objetivo de la v1.
+**Alternativas descartadas:** dejarlo como 500 (que es lo que hace la v1), o
+convertirlo en 400.
+**Decisión:** **409 Conflicto**, con el motivo en español.
+**Por qué:**
 
-## D2 — Capas completas desde el día 1 (y no un MVP en un solo archivo)
+En la v1 se decidió 500 a propósito, y estaba bien decidido: la integridad no
+era tema de esa versión, la única regla era la llave primaria, y traducirla
+habría sido lógica que la spec no pedía.
 
-**Alternativa descartada:** v1 = todo en `index.php` y refactorizar a capas
-después.
-**Decisión:** controlador → servicio → repositorio con interfaces desde v1.
-**Por qué:** el valor de la v1 es el **esqueleto** sobre el que crecen las
-demás versiones sin reescribir. El criterio de aceptación 6 (probar el
-servicio con un repositorio falso, sin MariaDB) **solo es posible** si el
-servicio depende de una `interface` — la prueba objetiva de que las capas
-quedaron bien cortadas. Bonus de PHP: las interfaces son nativas del lenguaje
-(`interface` / `implements`), más explícitas incluso que los Protocol de
-otros lenguajes.
+En la v2 la integridad **es** el tema, así que la balanza cambia. Y los tres
+códigos dicen cosas distintas:
 
-## D3 — Sin fábrica ni selección de motor: un ensamblador de una función
+| | Qué le comunica al que llama |
+|---|---|
+| **500** | «Se nos dañó algo». Es mentira: el sistema funcionó perfectamente |
+| **400** | «Su petición está mal escrita». También es mentira: estaba bien escrita |
+| **409** | «Su petición está bien, pero no cabe en los datos que hay» |
 
-**Alternativa descartada:** escribir de una vez la fábrica multi-motor.
-**Decisión:** `ensamblador.php` con una función que instancia la única
-combinación existente (YAGNI con dirección).
-**Por qué:** una fábrica con un solo area_conocimiento, termino_clave, linea_investigacion, programa y red es código muerto. Las interfaces
-`IRepositorioAreaConocimiento`, `IRepositorioTerminoClave`, `IRepositorioLineaInvestigacion`, `IRepositorioPrograma`, `IRepositorioRed` SÍ se escriben hoy — son las puertas por las que entrará
-MariaDB — pero el mecanismo de selección llega cuando exista algo que
-seleccionar (v3). El examen del principio abierto/cerrado será ese: en v3,
-solo `ensamblador.php` cambia.
+El 409 es el único que dice la verdad, y la diferencia se nota donde importa:
+en la pantalla. Con 500 el usuario lee «error interno» y llama a soporte; con
+409 lee «no se puede eliminar la línea de investigación porque hay otras fichas que dependen
+de ella» y sabe qué hacer.
 
-## D4 — La BD completa desde la v1 (la API solo toca `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red`)
+**Precio asumido:** hay que reconocer los códigos del motor, y eso ata un
+archivo a MariaDB. Se paga aislándolo (`errores_de_integridad.php`), que es
+justo lo que la v3 va a poner a prueba.
 
-**Alternativa descartada:** una BD mínima que crece con cada versión.
-**Decisión:** `db/init.sql` crea `bdgestion` COMPLETA (19 tablas, trigger,
-SPs); la regla es que el código de v1 solo puede nombrar `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red`.
-**Por qué:** los estudiantes ya vieron bases de datos — la BD es
-**infraestructura dada**; lo que se construye por versiones es la API. Evita
-migraciones entre versiones y deja el trigger esperando a la
-v2. Costo asumido: 11 tablas a la vista que aún no se usan — por eso la regla
-se declara explícita en la spec.
+## D2 — No se pregunta antes: se intenta y se traduce el veredicto
 
-## D5 — Modelo básico + validación en el controlador
+**Alternativa descartada:** que el servicio comprobara primero («¿existe el área conocimiento 1A01?») y solo entonces insertara.
+**Decisión:** intentar la escritura y traducir el «no» del motor.
+**Por qué, con las dos razones que lo deciden:**
 
-**Alternativas descartadas:** una clase validadora aparte (mete un concepto
-extra a la estructura), meter la validación dentro del modelo o del
-servicio, o no validar y dejar que la BD rechace.
-**Decisión:** los modelos `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red` son unas clases **básicas** (el modelo de `area_conocimiento` son las 3 propiedades - el dato como objeto, el modelo de `termino_clave` es una propiedad - el dato como objeto, el modelo de `linea_investigacion` son las 2 propiedades - el dato como objeto, el modelo de `programa` son las 10 propiedades - el dato como objeto, el modelo de `red` son las 3 propiedades - el dato como objeto. Es esto y nada más para estos modelos), y la validación del
-body vive en el **controlador** como métodos privados: la frontera HTTP
-revisa lo que llega de afuera → 422 con lista de errores ANTES de tocar el
-servicio. La estructura queda en las 4 carpetas canónicas: controladores,
-modelos, servicios, repositorios.
-**Por qué:** en los frameworks con validación integrada la frontera viene
-gratis; en PHP puro **construirla** enseña qué hace realmente una frontera
-de entrada. Validar es trabajo de quien recibe la petición (el controlador),
-y el modelo se mantiene simple para no confundir: modelo = el dato con
-tipos. La validación por verbo materializa la semántica HTTP: el mismo body
-`{"cant_graduados": 7}` falla en PUT (cant_graduados NO se rellenan con "números creibles", se dejan como "sin datos") y pasa en PATCH — la
-diferencia queda escrita en código, no en comentarios.
+1. **La comprobación previa no evita el problema, lo hace más raro.** Entre
+   el `SELECT` que comprueba y el `INSERT` que escribe, otro usuario puede
+   borrar esa área conocimiento. La ventana es de milisegundos, y por eso el error
+   aparece una vez cada mil — que es exactamente lo que lo vuelve difícil de
+   encontrar. Un error que falla siempre se arregla; uno que falla a veces se
+   convierte en leyenda.
+2. **Duplica una regla que ya está escrita.** La llave foránea vive en la
+   base. Comprobarla también en PHP significa mantener el mismo negocio en
+   dos idiomas, y el día que cambie uno solo, el sistema miente.
 
-## D6 — PDO con prepared statements (SQL visible)
+**Precio asumido:** el mensaje de error lo redacta el traductor a partir del
+código del motor, no del caso concreto, así que es un poco más general de lo
+que podría ser («alguno de los códigos a los que apunta no existe», sin decir
+cuál). Se prefirió eso a la carrera del punto 1.
 
-**Alternativa descartada:** un ORM (Eloquent/Doctrine) o funciones `pg_*`.
-**Decisión:** PDO + `prepare`/`execute` con parámetros nombrados.
-**Por qué:** la constitución exige SQL visible y parametrizado. PDO es el
-estándar del lenguaje, funciona con los tres motores de la ruta (v3/v4 solo
-cambian el DSN y el dialecto) y sus prepared statements son la defensa
-canónica contra inyección SQL. Detalle didáctico: el driver mysql entrega `DECIMAL`
-como string — el repositorio castea al serializar, y ese matiz (cada driver
-serializa distinto) es lección del curso.
+## D3 — Las entidades con FK no tienen la misma interfaz que las demás
 
-## D7 — `php -S` (built-in server) en vez de Apache/nginx
+**Alternativa descartada, y era la cómoda:** darle a `IRepositorioDocente`, `IRepositorioEstudiosRealizados`, `IRepositorioDocenteDepartamento`, `IRepositorioInteresesFuturos`, `IRepositorioEvaluacionDocente`, `IRepositorioReconocimiento`, `IRepositorioExperiencia`, `IRepositorioRedDocente`, `IRepositorioEstudioAC`, `IRepositorioApoyoProfesoral` y `IRepositorioBeca` los
+mismos cinco métodos que a los demás (`obtenerTodos`, `obtenerPorClave`,
+`crear`, `actualizar`, `eliminar`) y meter «anular» adentro de `actualizar`.
+**Decisión:** una interfaz distinta, con `obtenerTodas`, `obtenerPorNumero`,
+`crear`, `reemplazar`, `anular` y `eliminar`.
+**Por qué:** copiar el CRUD habría sido más rápido y habría **descrito mal el
+negocio**. Un area conocimiento no se «actualiza»: se reemplaza entero, porque cambiar
+un renglón cambia el área y la disciplina. Y anular no es ni corregir ni borrar —
+el area conocimiento se queda, con su número, su gran área, su area y su disciplina.
 
-**Alternativa descartada:** `php:8.3-apache` con mod_rewrite y `.htaccess`.
-**Decisión:** el servidor embebido de PHP con `index.php` como router:
-`php -S 0.0.0.0:8022 index.php`.
-**Por qué:** con `php -S … index.php` TODAS las peticiones pasan por el front
-controller sin configurar rewrite — cero archivos de configuración de
-servidor, que no son contenido de la v1. Producción real usaría
-nginx + PHP-FPM — fuera del alcance (documentado). El compose además monta el
-código como volumen: guardar un `.php` = refrescar el navegador, porque PHP
-reinterpreta cada petición (ni siquiera existe "reload").
+Cuando la forma de la interfaz no coincide con lo que la cosa hace, el que
+programa termina metiendo `if`s para tapar la diferencia. La interfaz dice lo
+que el area conocimiento **hace**, no lo que las demás entidades hacen.
 
-## D8 — Docker compose desde la v1 (tres servicios)
+**Lo que esto demuestra, y es la razón de que esté escrito aquí:** si esta
+API fuera genérica —una ruta `/api/area_conocimiento` con las mismas seis operaciones
+para todo—, esta decisión **no habría sido posible**. Habría habido PATCH de
+facturas porque las demás lo tienen, y no habría habido `/anular` porque las
+demás no lo necesitan.
 
-**Alternativa descartada:** `docker run` a mano para la BD y PHP local como
-única forma de correr.
-**Decisión:** `docker-compose.yml` con `mariadb` + `api-area-conocimiento` + `api-termino-clave` + `api-linea-investigacion` + `api-programa` + `api-red` +
-`front-php` desde v1 — `docker compose up -d --build` deja todo funcionando.
-**Por qué:** el Artículo 4 de la constitución ("un solo comando") es
-permanente — y la constitución gana. El compose de v1 es mínimo y **crece por
-versiones** (v3 suma PostgreSQL, v4 SQL Server…): la infraestructura también
-se construye por incrementos.
+## D4 — Las llaves autogeneradas se devuelven, no se adivinan
 
-## D9 — El front se hace en la v1, no en una versión final
+**Alternativa descartada:** que el `POST` respondiera solo `{estado, mensaje}`
+como en la v1, y que el cliente buscara después su ficha.
+**Decisión:** el `POST` devuelve el `id` que generó la base.
+**Por qué:** ese id **no existía antes de la petición**, y el cliente no tiene
+ninguna forma de deducirlo. Sin devolverlo, la única salida sería listar y
+adivinar cuál es el nuevo — que además falla si dos personas crean fichas a la
+vez.
 
-**Alternativa descartada:** la que este proyecto tenía escrita hasta ahora —
-API en v1 a v4 y **el front al final, en una v5**.
-**Decisión:** cada versión incluye su front; la v1 entrega las pantallas de
-`producto` (Artículo 1.1 de la constitución).
-**Por qué, y esto es un cambio de criterio, no un detalle:**
+En el modelo, la llave quedó como `?int`: una ficha recién construida y
+todavía sin guardar **no tiene** id, y el tipo lo dice. Poner un `0` habría
+sido inventarse un valor que ya significa otra cosa.
 
-- Los desajustes entre lo que la API devuelve y lo que la pantalla necesita
-  aparecen **el día que alguien pinta una tabla**. Con el front al final, ese
-  día llega con cuatro versiones de API encima: lo que en la v1 era corregir
-  en diez minutos, allá es rehacer.
-- Una API sin pantalla **se cree terminada sin estarlo**. Un `curl` que
-  responde 200 no dice si el dato sirve; la pantalla obliga a decidir qué se
-  muestra, cómo se dice el error en español y qué pasa cuando no hay filas.
-- Y sobre todo: **la separación de capas del Artículo 3 no se puede
-  demostrar sin front.** El criterio 10 —apagar la API con la base encendida
-  y ver que la pantalla no muestra ni una fila— es la única prueba de que son
-  dos procesos y no uno partido en dos carpetas.
+## D5 — Los formulario de Las entidades con FK tienen renglones fijos
 
-**Precio asumido:** cada versión es más trabajo, y hay que aprender dos
-oficios a la vez. A cambio, cada versión entrega algo que un humano puede
-usar, no un endpoint que hay que creerle a Postman.
+**Alternativas descartadas:** un botón «agregar renglón» con JavaScript, o una
+pantalla de dos pasos (primero el encabezado, después los renglones uno a uno).
+**Decisión:** Múltiples casillas cuyo número de casillas aumenta lo necesario según la entidad a la que pertenezca, y las vacías se ignoran al armar el cuerpo.
+**Por qué:** un formulario que crezca solo necesita JavaScript, y el
+Artículo 2 pide que lo que se vea sea PHP, no magia. La pantalla de dos pasos
+resolvía eso, pero rompía lo que la versión viene a enseñar: **el encabezado y
+el detalle se guardan juntos, en una sola operación.** Partirla en dos pasos
+habría hecho posible una entidad a medio crear, que es exactamente lo que el
+procedimiento almacenado existe para impedir.
 
-## D10 — El front también en PHP puro, con plantillas y sin JavaScript
+## D6 — El detalle viaja anidado dentro del encabezado
 
-**Alternativas descartadas:** una página con JavaScript que llame a la API
-desde el navegador (SPA a mano), o un motor de plantillas como Twig.
-**Decisión:** PHP renderiza el HTML **en el servidor**; el navegador recibe
-páginas terminadas y manda formularios corrientes. Las plantillas son
-archivos `.php` con `require`.
-**Por qué:** con JavaScript, quien llama a la API es el **navegador**, y
-entonces el criterio 10 cambia de significado —hay que hablar de CORS, de
-promesas y de errores asíncronos antes de haber enseñado qué es una capa—.
-Con render en el servidor, la petición a la API la hace **el proceso del
-front**, que es exactamente el dibujo de la arquitectura. Twig, por su parte,
-metería Composer, que el Artículo 2 prohíbe.
-**Y un beneficio que no se esperaba:** como todo son formularios, la prueba
-de humo puede **recorrer el sistema completo sin manos** — crear, guardar de
-las dos maneras y eliminar. En los fronts de Blazor de otros cursos eso no se
-puede: los clics viajan por una conexión persistente. La tecnología más
-sencilla resultó ser la más fácil de probar.
+**Alternativa descartada:** dos recursos separados —`/api_gestion/controladores` y
+`/api_gestion/controladores/{n}/renglones`— como hacen algunas APIs.
+**Decisión:** un solo recurso; el `GET` devuelve el encabezado con su
+detalles adentro, y el `POST` los recibe juntos.
+**Por qué:** son maestro-detalle, no dos cosas que se relacionan. Un area conocimiento
+sin renglones no es un area conocimiento incompleta: es inválida, y la base lo impide.
+Partirla en dos recursos habría hecho que el camino normal fueran dos
+peticiones y que existiera un estado intermedio —un area conocimiento sin renglones—
+que el negocio no admite.
 
-## D11 — `cliente_api.php` trabaja con arrays, no con las clases de la API
+Por ejemplo, se nota en la pantalla: `docente_detalle.php` hace **una** llamada y pinta
+todo. Con dos recursos tendría que hacer dos y coserlas.
 
-**Alternativa descartada, y hay que nombrarla porque es tentadora:**
-`require_once __DIR__ . '/../api_gestion/modelos/Programa.php';` para usar
-en el front la clase `Programa` que ya existe. **Funcionaría.**
-**Decisión:** el front trabaja con los arrays que `json_decode` devuelve.
-**Por qué:** ese `require` los volvería un solo programa repartido en dos
-carpetas. Renombrar un método adentro de la API rompería la pantalla **sin
-que nadie tocara el contrato** — y el contrato es lo único que deberían
-compartir. Además el front no podría existir en otro lenguaje ni en otra
-máquina, que es la mitad del sentido de tener una API.
-**Precio asumido:** se pierde el autocompletado y los tipos del lado del
-front. Es un precio real, y es el correcto: en este proyecto la tentación es
-mayor que en otros porque los dos están en PHP, y por eso la regla se escribe
-en vez de darse por obvia.
+## D7 — Los formularios ofrecen desplegables para las llaves foráneas
 
-## D12 — Bootstrap, y guardado en el repositorio en vez de traído de un CDN
+**Alternativa descartada:** una casilla de texto donde se teclea el código.
+**Decisión:** un `<select>` con los nombres.
+**Por qué:** teclear un identificador que hay que ir a buscar a otra pantalla
+es de las cosas que hacen odiar un sistema. Cuesta tres peticiones más al
+abrir el formulario, y las vale.
 
-**Alternativas descartadas:** escribir el CSS a mano (fue el primer intento) y
-enlazar Bootstrap desde un CDN.
-**Decisión:** Bootstrap 5.3, con sus dos archivos guardados en
-`front_php/publico/`, y un `estilos.css` propio de veinte líneas para lo poco
-que Bootstrap no trae.
-**Por qué no a mano:** una pantalla que se ve terminada es parte del trabajo
-—un sistema feo se lee como un sistema a medias—, y escribir una hoja de
-estilos decente no es contenido de este curso. Con Bootstrap, tres clases en
-una tabla dan un resultado profesional y el estudiante se concentra en lo que
-sí se está enseñando: capas, contratos y la separación front/API.
-**Por qué no del CDN:** una línea más corta, sí, y el día que el salón se
-quede sin internet la pantalla se ve como en 1995. Eso pasa en clase, no en
-teoría. Dos archivos en el repositorio lo resuelven para siempre, y de paso
-el proyecto sigue cumpliendo el Artículo 2: **esto no es una dependencia
-instalada por un gestor de paquetes**, es un archivo copiado — no hay
-`composer.json` ni `vendor/`.
-**Precio asumido:** 300 KB en el repositorio, y actualizar Bootstrap es
-volver a copiar el archivo. Los dos son baratos.
-
-## D13 — El aviso viaja en la sesión, y después de guardar se redirige
-
-**Alternativa descartada:** pintar el listado directamente en la respuesta
-del POST, sin redirigir.
-**Decisión:** *post/redirect/get* — se guarda, se deja el aviso en
-`$_SESSION` y se redirige al listado, que lo muestra una vez y lo borra.
-**Por qué:** sin redirección, refrescar la página del navegador **vuelve a
-enviar el formulario** y crea el producto dos veces; el navegador incluso lo
-advierte con un cuadro de diálogo que nadie lee. Redirigir hace que la última
-dirección visitada sea un GET inocuo. El precio es que la redirección pierde
-la memoria, y de ahí sale la sesión: dos funciones, `redirigir_con()` y
-`aviso_pendiente()`.
+**Y lo que NO significa, que es lo importante:** el desplegable no valida
+nada. La lista pudo cargarse hace un minuto y esa ficha pudo borrarse
+entretanto; y cualquiera puede mandar un `POST` sin pasar por la pantalla.
+Quien defiende la integridad sigue siendo la base — lo de arriba solo hace el
+formulario cómodo. Confundir «la pantalla no deja escoger eso» con «eso no
+puede pasar» es uno de los errores más caros que se cometen escribiendo
+software.
