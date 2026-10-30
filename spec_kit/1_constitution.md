@@ -7,8 +7,7 @@
 > El proyecto se construye **por versiones** (desarrollo incremental guiado por
 > especificaciones): ver el [mapa de versiones](versiones/0_mapa_versiones.md).
 > Cada artículo aplica desde la versión que introduce su alcance — por ejemplo,
-> en la v1 la API solo conoce `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red` con un motor, así que los   artículos
-> sobre los otros motores son la META, no el estado actual.
+> en la v1 la API solo conoce `area_conocimiento`, `termino_clave`, `linea_investigacion`, `programa` y `red` con un motor; en la v2 se suman las **11 tablas con claves foráneas** y la integridad referencial; en v3 y v4 se suman los otros motores. Los artículos sobre esos otros motores son la META, no el estado actual.
 >
 > **El front no está entre esas metas: existe desde la v1.** Por qué, en el
 > Artículo 1.1.
@@ -24,7 +23,7 @@ arquitectura** a estudiantes universitarios. Ante cualquier disyuntiva entre
 - Todo el código, comentarios, mensajes y documentación se escriben en **español**.
 - Cada archivo abre con un comentario que explica su papel en la arquitectura.
 - Se prefiere código explícito y repetitivo-pero-legible sobre metaprogramación compacta.
-- Cada que se termine un paso, esperas la directiva de un "Siguiente" para continuar con el código
+- Cada que se termine un paso, esperas la directiva de un "Siguiente" para continuar con el código.
 
 ### Artículo 1.1 — Una versión incluye SU FRONT
 
@@ -66,12 +65,6 @@ al final.
 
 ## Artículo 3 — Arquitectura de 3 capas estricta
 
-```
-CAPA 1: FRONT (PHP, :8020)   — solo pinta HTML y llama la API; NUNCA toca la BD
-CAPA 2: API  (PHP, :8022)    — api_facturas; solo JSON, nunca HTML
-CAPA 3: DATOS                — PostgreSQL | MariaDB | SQL Server (bdgestion)
-```
-
 - El front **no abre conexiones de base de datos**; solo habla HTTP con la API.
   En este proyecto la tentación es mayor que en otros, porque el front y la
   API están **los dos escritos en PHP**: un `require_once` de una clase de la
@@ -95,7 +88,8 @@ contenedores.
 
 - El motor activo se elige con **configuración**, nunca con cambios de código.
 - Los tres motores contienen la **misma base de datos** (`bdgestion_*_local`):
-  mismas 5 tablas, mismos datos, mismos triggers y procedimientos.
+  mismas tablas, mismos datos, mismos triggers y procedimientos. En la v1 son
+  5 tablas; la v2 suma las 11 con FK; v3 y v4 completan las 19.
 - Todo acceso a datos pasa por interfaces + un punto único de ensamblaje
   (inversión de dependencias — la D de SOLID).
 
@@ -116,7 +110,7 @@ imagen (`--build`) solo es necesario si cambia el `Dockerfile`.
 
 | Cosa | Convención |
 |---|---|
-| Puertos públicos | front **8020** · api_facturas **8022** |
+| Puertos públicos | front **8020** · API **8022** |
 | Puertos de BD hacia el host | PostgreSQL **15452** · MariaDB **13326** · SQL Server **11453** |
 | Hosts internos (entre contenedores) | `postgres:5432` · `mariadb:3306` · `sqlserver:1433` |
 | Credenciales BD | usuario `paradigmas` / clave `paradigmas123` (SQL Server: `sa` / `Paradigmas123!`) |
@@ -135,17 +129,23 @@ imagen (`--build`) solo es necesario si cambia el `Dockerfile`.
 
 ## Artículo 10 — La API es específica, nunca genérica
 
-Cada recurso tiene **su propia ruta escrita a mano**: `/api/area_conocimiento`, `/api/termino_clave`, `/api/linea_investigacion`,
-`/api/programa`, `/api/red`. Nunca una ruta con el nombre de la tabla como
-parámetro (`/api/{tabla}`) que sirva para todas.
+Cada recurso tiene **su propia ruta escrita a mano**: `/api/area_conocimiento`,
+`/api/termino_clave`, `/api/linea_investigacion`, `/api/programa`, `/api/red`
+— y, desde la v2, `/api/docente`, `/api/estudios_realizados`,
+`/api/docente_departamento`, `/api/intereses_futuros`, `/api/evaluacion_docente`,
+`/api/reconocimiento`, `/api/experiecia`, `/api/red_docente`, `/api/estudio_ac`,
+`/api/apoyo_profesoral`, `/api/beca`. Nunca una ruta con el nombre de la tabla
+como parámetro (`/api/{tabla}`) que sirva para todas.
 
 **El porqué, que es lo que hay que entender —y con una excepción honesta.**
 
 Una API genérica es **buena para prototipar**: se escribe una vez y de una vez
-sirve para las doce tablas. Ahí gana de verdad, y decir lo contrario sería
-falso. Lo que pasa es que ese ahorro se cobra después:
+sirve para las dieciséis tablas. Ahí gana de verdad, y decir lo contrario sería
+falso. Lo que pasa es que ese ahorro se cobra después. La tabla de abajo
+compara las 5 tablas de la v1 y las 11 de la v2 contra lo que ofrecería una
+ruta genérica:
 
-| | Genérica `/api/{tabla}` | Específica `/api/area_conocimiento` | Específica `/api/termino_clave` | Específica `/api/linea_investigacion` | Específica `/api/programa` | Específica `/api/red` |
+| | Genérica `/api/{tabla}` | v1: `area_conocimiento` | v1: `termino_clave` | v1: `linea_investigacion` | v1: `programa` | v1: `red` |
 |---|---|---|---|---|---|---|
 | **Escribirla** | Una vez, y sirve para todo | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso |
 | **Documentación** | Dice «tabla: texto». No dice cuáles ni qué campos lleva cada una | Documenta `id`, `gran_area`, `area`, `disciplina` | Documenta `termino`, `termino_ingles` | Documenta `id`, `nombre`, `descripcion` | Documenta `id`, `nombre`, `tipo`, `nivel`, fechas, cohortes, graduados, ciudad y facultad | Documenta `idr`, `nombre`, `url`, `pais` |
@@ -157,12 +157,48 @@ falso. Lo que pasa es que ese ahorro se cobra después:
 | **Tipo de recurso** | Desconocido hasta consultar la tabla | Catálogo jerárquico del conocimiento | Catálogo de términos y traducciones | Catálogo de líneas de investigación | Catálogo de programas académicos | Catálogo de redes académicas |
 | **Datos principales** | Desconocidos | `gran_area`, `area`, `disciplina` | `termino`, `termino_ingles` | `nombre`, `descripcion` | `nombre`, `tipo`, `nivel`, fechas, cohortes, graduados, ciudad, facultad | `nombre`, `url`, `pais` |
 | **Claves foráneas en v1** | No puede determinarse de forma explícita | Ninguna | Ninguna | Ninguna | Ninguna | Ninguna |
+| **Claves foráneas en v2** | No puede determinarse de forma explícita | Ninguna | Ninguna | Ninguna | Ninguna | Ninguna |
 | **Cantidad inicial** | Depende de la tabla | 218 registros | — | — | 191 registros | — |
+
+Y la misma comparación, ahora contra los 11 recursos que estrena la v2:
+
+| | Genérica `/api/{tabla}` | `docente` | `estudios_realizados` | `docente_departamento` | `intereses_futuros` | `evaluacion_docente` |
+|---|---|---|---|---|---|---|
+| **Escribirla** | Una vez, y sirve para todo | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso |
+| **Documentación** | Dice «tabla: texto». No dice cuáles ni qué campos lleva cada una | Documenta `cedula`, `nombre_completo`, `url_cvlac`, `escalafon`, `categoria_minciencias`, `perfil`, `linea_investigacion_principal` | Documenta `id`, `titulo`, `universidad`, `fecha`, `tipo`, `cedula` | Documenta `cedula`, `id_programa`, `dedicacion`, `modalidad`, `fecha_inicio`, `fecha_fin` | Documenta `cedula`, `termino` | Documenta `id`, `semestre`, `calificacion`, `cedula` |
+| **Un campo que solo tiene una tabla** | No cabe: obligaría a un `if` adentro de lo genérico | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás |
+| **Una regla que solo aplica a una tabla** | Igual: el `if` crece con cada excepción | Vive en la lógica de `docente` (maestro-detalle) | Vive en la lógica de `estudios_realizados` (hijo de docente) | Vive en la lógica de `docente_departamento` (puente) | Vive en la lógica de `intereses_futuros` (puente) | Vive en la lógica de `evaluacion_docente` (hijo de docente) |
+| **Un cambio en un recurso** | Toca el código de TODOS | Toca el código de `docente` | Toca el código de `estudios_realizados` | Toca el código de `docente_departamento` | Toca el código de `intereses_futuros` | Toca el código de `evaluacion_docente` |
+| **Quien la consume** | Tiene que preguntar qué valores acepta el parámetro | Lee `/api/docente` directamente | Lee `/api/estudios_realizados` directamente | Lee `/api/docente_departamento` directamente | Lee `/api/intereses_futuros` directamente | Lee `/api/evaluacion_docente` directamente |
+| **Identificador** | Depende de la tabla y debe descubrirlo dinámicamente | `cedula` (string, natural) | `id` (autoincremental) | `(cedula, id_programa)` (compuesta) | `(cedula, termino)` (compuesta) | `id` (autoincremental) |
+| **Tipo de recurso** | Desconocido hasta consultar la tabla | Ficha maestra con detalle (estudios, intereses, redes) | Ficha hija del docente | Tabla puente docente↔programa | Tabla puente docente↔término | Ficha hija del docente |
+| **Datos principales** | Desconocidos | Datos personales y académicos del docente | Título, universidad, tipo, fecha | Dedicación, modalidad, fechas | Solo la relación | Semestre, calificación |
+| **Claves foráneas en v2** | No puede determinarse de forma explícita | `linea_investigacion_principal` → `linea_investigacion.id` | `cedula` → `docente.cedula` | `cedula` → `docente.cedula`; `id_programa` → `programa.id` | `cedula` → `docente.cedula`; `termino` → `termino_clave.termino` | `cedula` → `docente.cedula` |
+| **Cantidad inicial** | Depende de la tabla | — | — | — | — | — |
+
+| | Genérica `/api/{tabla}` | `reconocimiento` | `experiecia` | `red_docente` | `estudio_ac` | `apoyo_profesoral` | `beca` |
+|---|---|---|---|---|---|---|---|
+| **Escribirla** | Una vez, y sirve para todo | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso | Una vez por recurso |
+| **Documentación** | Dice «tabla: texto». No dice cuáles ni qué campos lleva cada una | Documenta `id`, `tipo`, `fecha`, `institucion`, `ambito`, `cedula` | Documenta `id`, `cargo`, `institucion`, `tipo`, `fecha_inicio`, `fecha_fin`, `cedula` | Documenta `idr`, `cedula`, `fecha_vinculacion`, `actividades_destacadas` | Documenta `id_estudio`, `id_area` | Documenta `id_estudio`, `tipo_apoyo`, `institucion`, `monto` | Documenta `id_estudio`, `tipo_beca`, `institucion`, `fecha_inicio`, `fecha_fin` |
+| **Un campo que solo tiene una tabla** | No cabe: obligaría a un `if` adentro de lo genérico | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás | Se agrega en su recurso y no afecta a los demás |
+| **Una regla que solo aplica a una tabla** | Igual: el `if` crece con cada excepción | Vive en la lógica de `reconocimiento` | Vive en la lógica de `experiecia` (errata histórica) | Vive en la lógica de `red_docente` (puente) | Vive en la lógica de `estudio_ac` (puente) | Vive en la lógica de `apoyo_profesoral` (hijo de estudio) | Vive en la lógica de `beca` (hijo de estudio) |
+| **Un cambio en un recurso** | Toca el código de TODOS | Toca el código de `reconocimiento` | Toca el código de `experiecia` | Toca el código de `red_docente` | Toca el código de `estudio_ac` | Toca el código de `apoyo_profesoral` | Toca el código de `beca` |
+| **Quien la consume** | Tiene que preguntar qué valores acepta el parámetro | Lee `/api/reconocimiento` directamente | Lee `/api/experiecia` directamente | Lee `/api/red_docente` directamente | Lee `/api/estudio_ac` directamente | Lee `/api/apoyo_profesoral` directamente | Lee `/api/beca` directamente |
+| **Identificador** | Depende de la tabla y debe descubrirlo dinámicamente | `id` (autoincremental) | `id` (autoincremental) | `(idr, cedula)` (compuesta) | `(id_estudio, id_area)` (compuesta) | `(id_estudio, tipo_apoyo)` (compuesta) | `(id_estudio, tipo_beca)` (compuesta) |
+| **Tipo de recurso** | Desconocido hasta consultar la tabla | Ficha hija del docente | Ficha hija del docente | Tabla puente red↔docente | Tabla puente estudio↔área | Ficha hija de estudio | Ficha hija de estudio |
+| **Datos principales** | Desconocidos | Tipo, fecha, institución, ámbito | Cargo, institución, tipo, fechas | Fecha de vinculación, actividades | Solo la relación | Institución, monto | Institución, fechas |
+| **Claves foráneas en v2** | No puede determinarse de forma explícita | `cedula` → `docente.cedula` | `cedula` → `docente.cedula` | `idr` → `red.idr`; `cedula` → `docente.cedula` | `id_estudio` → `estudios_realizados.id`; `id_area` → `area_conocimiento.id` | `id_estudio` → `estudios_realizados.id` | `id_estudio` → `estudios_realizados.id` |
+| **Cantidad inicial** | Depende de la tabla | — | — | — | — | — | — |
 
 En corto: **lo genérico es barato de escribir y caro de vivir; lo específico
 es caro de escribir una vez y barato de vivir.** Un prototipo se tira a los
 dos meses, así que solo paga la primera columna. Un sistema que se mantiene
 paga la segunda todos los días.
+
+**La prueba concreta de que hacía falta ser específico en la v2:** el
+`docente` no admite `PATCH` (405) y sí admite un `GET /api/docente/{cedula}/completo`
+que devuelve el detalle anidado. Ninguna ruta genérica habría podido decir
+eso sin un `if` adentro que crece con cada excepción.
 
 **La excepción honesta:** PostgREST, Hasura y compañía son genéricos y son
 excelentes. La diferencia es que ahí **lo genérico es el producto entero**:
@@ -171,20 +207,46 @@ consultas. Eso no es «una API genérica hecha en casa» — es otra cosa.
 
 En este curso, entonces: una ruta por recurso, con sus campos escritos.
 
-## Artículo 11 — La base de datos también es parte del sistema
 
-Parte de las reglas del negocio **vive en la base**: llaves foráneas que
-impiden referencias rotas, procedimientos que hacen varias escrituras como si fueran una.
+## Artículo 11 — La base también es parte del sistema
 
-La API **no las repite y no las contradice**:
+> Este artículo se estrena con la v2, cuando el sistema empieza a tener
+> relaciones entre tablas y la base deja de ser solo un almacén.
 
-- No comprueba en PHP lo que una llave foránea ya defiende. Preguntar antes
-  («¿existe esa persona?») no evita el problema —entre la pregunta y la
-  escritura, otro puede borrarla— y además obliga a mantener la misma regla
-  en dos idiomas.
-- No calcula pero SÍ **traduce** lo que la base responde: el rechazo del motor sale de la API
-  como un mensaje en español, no como un número de error ni como un 500.
+- **La integridad referencial la defiende la base, no la API.** Si una ficha
+  apunta a un código que no existe, o si se intenta borrar algo de lo que
+  otros dependen, el motor lo rechaza. La API **no comprueba antes**:
+  intenta la operación y **traduce el veredicto del motor** a un mensaje en
+  español.
+- **El resultado de esa traducción es un 409 (Conflicto).** No es un 422 (el
+  cliente escribió mal) ni un 500 (se rompió algo): es «su petición no cabe
+  en los datos que hay». La traducción vive en **un solo archivo**
+  (`repositorios/errores_de_integridad.php`), que es el único que tiene
+  derecho a conocer los números de error del motor (1062, 1452, 1451 en
+  MariaDB). Ninguna otra capa los conoce.
+- **Lo que la base calcula no se recalcula en PHP.** Si un trigger o un
+  procedimiento actualiza un campo (por ejemplo, la línea de investigación
+  principal de un docente a partir de sus estudios), la API **no repite ese
+  cálculo**. Lo lee y lo devuelve. La base es la única fuente de verdad de lo
+  que la base calcula.
+- **Los procedimientos almacenados se llaman, no se reescriben.** Cuando la
+  base ya trae una operación compleja escrita (el alta de un docente con su
+  detalle, el listado con agregados), el repositorio la **llama** y lee su
+  resultado. No la reimplementa en SQL suelto.
+- **El maestro-detalle se maneja como una unidad.** Un docente con sus
+  estudios, intereses y redes es una sola operación de negocio: o se guarda
+  completo, o no se guarda. La API no ofrece un `PATCH` que modifique «solo
+  un pedacito» del detalle, porque eso dejaría la ficha a medio construir. El
+  reemplazo es entero (`PUT`) y la edición de una pieza suelta se hace por el
+  endpoint específico de esa pieza.
 
-El precio es real y hay que decirlo: parte del sistema queda escrita en un
-dialecto de SQL, y por eso vive en clases que llevan el nombre del motor. La
-versión 3 pondrá esa decisión a prueba.
+**El porqué, en corto:** una base de datos relacional no es un almacén tonto.
+Tiene reglas, tiene procedimientos, tiene triggers, y sabe decir «no». Una
+API que ignora eso y repite las reglas en PHP termina con dos fuentes de
+verdad que se desincronizan al primer cambio. Este artículo fija la única
+dirección posible: **la base defiende, la API traduce, el front muestra**.
+
+En la v2 este artículo se aplica a las 11 tablas con claves foráneas. En v3 y
+v4 se aplicará igual contra los otros motores: los números de error del motor
+cambiarán, pero la traducción seguirá viviendo en el mismo archivo del
+repositorio.
