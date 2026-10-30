@@ -1,419 +1,403 @@
 <?php
 declare(strict_types=1);
 
-// ---------------------------------------------------------------------------
-// REQUIRES
-// El front controller de la API carga todos los controladores. Cada
-// controlador, a su vez, carga su interfaz de servicio, su modelo y el
-// ensamblador, así que desde aquí basta con los controladores.
-// ---------------------------------------------------------------------------
-require_once __DIR__ . '/controladores/ControladorAreaConocimiento.php';
-require_once __DIR__ . '/controladores/ControladorTerminoClave.php';
-require_once __DIR__ . '/controladores/ControladorLineaInvestigacion.php';
-require_once __DIR__ . '/controladores/ControladorPrograma.php';
-require_once __DIR__ . '/controladores/ControladorRed.php';
-
 /**
- * ---------------------------------------------------------------------------
- * ¿Qué es este archivo?
- *   Es el FRONT CONTROLLER de la API: el único punto de entrada. TODAS las
- *   peticiones HTTP a la API pasan por aquí.
+ * index.php
  *
- * ¿Qué papel cumple en la arquitectura?
- *   Es el enrutador. Su trabajo es:
- *     1. Fijar el header JSON.
- *     2. Leer el método HTTP (GET, POST, PUT, PATCH, DELETE).
- *     3. Leer la ruta desde REQUEST_URI y quitarle el query string.
- *     4. Identificar el recurso y el verbo (por if/elseif explícitos,
- *        como pide el 3_plan.md §9).
- *     5. Delegar al método correspondiente del controlador.
- *     6. Convertir la respuesta ['codigo' => int, 'cuerpo' => array] en
- *        la respuesta HTTP real (http_response_code + echo json_encode).
+ * Front controller de la API (api_gestion, puerto 8022).
  *
- * ¿Qué NO hace?
- *   - NO valida datos (eso es tarea del controlador).
- *   - NO conoce la base de datos.
- *   - NO arma SQL.
+ * Único punto de entrada: recibe la petición, la enruta al controlador
+ * correspondiente y emite la respuesta JSON. Todo el enrutamiento vive aquí,
+ * escrito a mano y legible completo (Artículo 2 de la constitución).
  *
- * ¿Qué endpoints cubre?
- *   - GET    /                          → diagnóstico
- *   - GET    /api/area_conocimiento     → listar
- *   - GET    /api/area_conocimiento/{id} → obtener
- *   - POST   /api/area_conocimiento     → crear
- *   - PUT    /api/area_conocimiento/{id} → reemplazar
- *   - PATCH  /api/area_conocimiento/{id} → actualizar parcial
- *   - DELETE /api/area_conocimiento/{id} → eliminar
- *   ... y el mismo juego para termino_clave, linea_investigacion, programa
- *   y red. En total, 7 endpoints por recurso × 5 recursos + 1 diagnóstico.
+ * Responsabilidades:
+ *   1. Leer método + ruta + query + body.
+ *   2. Despachar a la rama correcta.
+ *   3. Responder 405 si el método no está registrado para esa ruta.
+ *   4. Responder 404 si la ruta no existe.
+ *   5. Responder el diagnóstico en GET /.
  *
- * ¿Qué hace cuando la ruta no existe?
- *   Devuelve 404 con un mensaje claro en JSON.
+ * Lo que este enrutador NO hace:
+ *   - No usa un switch por recurso armando el nombre de la clase con texto
+ *     (Artículo 10). Cada recurso tiene su bloque escrito.
+ *   - No registra PATCH para /api/docente: el docente no admite PATCH, y
+ *     si llega uno cae al 405 por defecto (RF12).
  *
- * ¿Qué hace cuando el verbo no corresponde a una ruta existente?
- *   Devuelve 405 (method not allowed) con un mensaje claro.
- * ---------------------------------------------------------------------------
+ * La v1 sigue respondiendo exactamente igual: sus cinco bloques se
+ * conservan y se les delega como antes.
  */
 
-// 1. Cabecera JSON para todas las respuestas.
-header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/servicios/ensamblador.php';
+require_once __DIR__ . '/controladores/ControladorDocente.php';
+require_once __DIR__ . '/controladores/ControladorEstudiosRealizados.php';
+require_once __DIR__ . '/controladores/ControladorDocenteDepartamento.php';
+require_once __DIR__ . '/controladores/ControladorInteresesFuturos.php';
+require_once __DIR__ . '/controladores/ControladorEvaluacionDocente.php';
+require_once __DIR__ . '/controladores/ControladorReconocimiento.php';
+require_once __DIR__ . '/controladores/ControladorExperiencia.php';
+require_once __DIR__ . '/controladores/ControladorRedDocente.php';
+require_once __DIR__ . '/controladores/ControladorEstudioAc.php';
+require_once __DIR__ . '/controladores/ControladorApoyoProfesoral.php';
+require_once __DIR__ . '/controladores/ControladorBeca.php';
+require_once __DIR__ . '/../config/conexion.php';
 
-// 2. Método HTTP (GET, POST, PUT, PATCH, DELETE).
+// ------------------------------------------------------------------
+// Diagnóstico: GET /
+// ------------------------------------------------------------------
 $metodo = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-// 3. Ruta sin query string.
-//    REQUEST_URI trae, por ejemplo: "/api/programa/1?limite=3"
-//    Queremos quedarnos solo con: "/api/programa/1".
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
-$posInterrogacion = strpos($uri, '?');
-if ($posInterrogacion !== false) {
-    $uri = substr($uri, 0, $posInterrogacion);
+$ruta = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$ruta = rtrim($ruta, '/');
+if ($ruta === '') {
+    $ruta = '/';
 }
 
-// 4. Normalizar la ruta: quitar la barra final (excepto cuando la ruta es "/").
-if ($uri !== '/' && str_ends_with($uri, '/')) {
-    $uri = rtrim($uri, '/');
+if ($metodo === 'GET' && $ruta === '/') {
+    responderJson(200, [
+        'mensaje' => 'API Gestión funcionando',
+        'version' => 'v2',
+        'recursos' => [
+            'area_conocimiento', 'termino_clave', 'linea_investigacion',
+            'programa', 'red',
+            'docente', 'estudios_realizados', 'docente_departamento',
+            'intereses_futuros', 'evaluacion_docente', 'reconocimiento',
+            'experiecia', 'red_docente', 'estudio_ac',
+            'apoyo_profesoral', 'beca',
+        ],
+        'contratos' => 'docs/spec_kit/versiones/v2_tablas_con_fk/6_contracts.md',
+    ]);
+    exit;
 }
 
-// 5. Query string ya parseado por PHP (en $_GET).
-$query = $_GET;
-
-// 6. Leer el body JSON (solo si el método lo admite).
-//    json_decode con true para que devuelva array asociativo.
-$bodyCrudo = file_get_contents('php://input');
+// ------------------------------------------------------------------
+// Cuerpo y query
+// ------------------------------------------------------------------
+$cuerpoCrudo = file_get_contents('php://input') ?: '';
 $body = [];
-if ($bodyCrudo !== false && trim($bodyCrudo) !== '') {
-    $decodificado = json_decode($bodyCrudo, true);
+if ($cuerpoCrudo !== '') {
+    $decodificado = json_decode($cuerpoCrudo, true);
     if (is_array($decodificado)) {
         $body = $decodificado;
     }
-    // Si el body venía mal formado, $body queda como array vacío y el
-    // controlador responderá 422 cuando lo valide.
 }
 
-// 7. Enrutamiento explícito, con if/elseif por ruta y verbo.
-//    La razón de hacerlo así (y no con un array de rutas o regex) es
-//    didáctica: todo el enrutamiento se lee de arriba abajo en un solo
-//    archivo, y cada caso se ve a simple vista (3_plan.md §9).
+// ------------------------------------------------------------------
+// Bloques de enrutamiento, uno por recurso
+// ------------------------------------------------------------------
+$conexion = obtenerConexion();
 
-// ---------------------------------------------------------------------------
-// GET /  → diagnóstico
-// ---------------------------------------------------------------------------
-if ($metodo === 'GET' && $uri === '/') {
-    responderJson(200, [
-        'mensaje'   => 'API Gestión funcionando',
-        'version'   => 'v1',
-        'contratos' => 'docs/spec_kit/versiones/v1_catalogo_mariadb/6_contracts.md',
-    ]);
-    exit;
-}
-
-// ===========================================================================
-// RECURSO: /api/area_conocimiento
-// ===========================================================================
-if (preg_match('#^/api/area_conocimiento$#', $uri)) {
-    $controlador = new ControladorAreaConocimiento();
+// --- /api/docente ---------------------------------------------------
+if (preg_match('#^/api/docente(?:/([^/]+))?(?:/(completo))?$#', $ruta, $m)) {
+    $controlador = new ControladorDocente(crearServicioDocente($conexion));
+    $cedula = $m[1] ?? null;
+    $completo = $m[2] ?? null;
 
     if ($metodo === 'GET') {
-        responderRespuesta($controlador->listar($query));
+        $parametrosRuta = [];
+        if ($cedula !== null) {
+            $parametrosRuta['cedula'] = $cedula;
+        }
+        if ($completo !== null) {
+            $parametrosRuta['completo'] = $completo;
+        }
+        $controlador->manejarGet($parametrosRuta, $_GET);
         exit;
     }
-    if ($metodo === 'POST') {
-        responderRespuesta($controlador->crear($body));
+    if ($metodo === 'POST' && $cedula === null) {
+        $controlador->manejarPost($body);
         exit;
     }
+    if ($metodo === 'PUT' && $cedula !== null) {
+        $controlador->manejarPut(['cedula' => $cedula], $body);
+        exit;
+    }
+    if ($metodo === 'DELETE' && $cedula !== null) {
+        $controlador->manejarDelete(['cedula' => $cedula]);
+        exit;
+    }
+    // Nota: NO hay rama para PATCH. Cae al 405 por defecto (RF12).
     responderJson(405, [
-        'estado'  => 405,
+        'estado' => 405,
         'mensaje' => 'Método no permitido para esta ruta.',
+        'detalle' => '',
     ]);
     exit;
 }
 
-if (preg_match('#^/api/area_conocimiento/([^/]+)$#', $uri, $coincidencias)) {
-    $id = urldecode($coincidencias[1]);
-    $controlador = new ControladorAreaConocimiento();
+// --- /api/estudios_realizados --------------------------------------
+if (preg_match('#^/api/estudios_realizados(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorEstudiosRealizados(crearServicioEstudiosRealizados($conexion));
+    $id = $m[1] ?? null;
+    $this->despacharFicha($metodo, $id, $controlador, $_GET, $body);
+    exit;
+}
+
+// --- /api/evaluacion_docente ---------------------------------------
+if (preg_match('#^/api/evaluacion_docente(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorEvaluacionDocente(crearServicioEvaluacionDocente($conexion));
+    $id = $m[1] ?? null;
+    $this->despacharFicha($metodo, $id, $controlador, $_GET, $body);
+    exit;
+}
+
+// --- /api/reconocimiento -------------------------------------------
+if (preg_match('#^/api/reconocimiento(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorReconocimiento(crearServicioReconocimiento($conexion));
+    $id = $m[1] ?? null;
+    $this->despacharFicha($metodo, $id, $controlador, $_GET, $body);
+    exit;
+}
+
+// --- /api/experiecia -----------------------------------------------
+if (preg_match('#^/api/experiecia(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorExperiencia(crearServicioExperiencia($conexion));
+    $id = $m[1] ?? null;
+    $this->despacharFicha($metodo, $id, $controlador, $_GET, $body);
+    exit;
+}
+
+// --- /api/docente_departamento -------------------------------------
+if (preg_match('#^/api/docente_departamento(?:/([^/]+))?(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorDocenteDepartamento(crearServicioDocenteDepartamento($conexion));
+    $docente = $m[1] ?? null;
+    $departamento = $m[2] ?? null;
 
     if ($metodo === 'GET') {
-        responderRespuesta($controlador->obtener($id));
+        $parametrosRuta = [];
+        if ($docente !== null) {
+            $parametrosRuta['docente'] = $docente;
+        }
+        if ($departamento !== null) {
+            $parametrosRuta['departamento'] = $departamento;
+        }
+        $controlador->manejarGet($parametrosRuta, $_GET);
         exit;
     }
-    if ($metodo === 'PUT') {
-        responderRespuesta($controlador->reemplazar($id, $body));
+    if ($metodo === 'POST' && $docente === null) {
+        $controlador->manejarPost($body);
         exit;
     }
-    if ($metodo === 'PATCH') {
-        responderRespuesta($controlador->actualizarParcial($id, $body));
-        exit;
+    if ($docente !== null && $departamento !== null) {
+        $parametrosRuta = ['docente' => $docente, 'departamento' => $departamento];
+        if ($metodo === 'PUT') {
+            $controlador->manejarPut($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'PATCH') {
+            $controlador->manejarPatch($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'DELETE') {
+            $controlador->manejarDelete($parametrosRuta);
+            exit;
+        }
     }
-    if ($metodo === 'DELETE') {
-        responderRespuesta($controlador->eliminar($id));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
+    responderMetodoNoPermitido();
 }
 
-// ===========================================================================
-// RECURSO: /api/termino_clave
-// ===========================================================================
-if (preg_match('#^/api/termino_clave$#', $uri)) {
-    $controlador = new ControladorTerminoClave();
+// --- /api/intereses_futuros ----------------------------------------
+if (preg_match('#^/api/intereses_futuros(?:/([^/]+))?(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorInteresesFuturos(crearServicioInteresesFuturos($conexion));
+    $docente = $m[1] ?? null;
+    $termino = $m[2] ?? null;
 
     if ($metodo === 'GET') {
-        responderRespuesta($controlador->listar($query));
+        $parametrosRuta = [];
+        if ($docente !== null) {
+            $parametrosRuta['docente'] = $docente;
+        }
+        if ($termino !== null) {
+            $parametrosRuta['termino_clave'] = $termino;
+        }
+        $controlador->manejarGet($parametrosRuta, $_GET);
         exit;
     }
-    if ($metodo === 'POST') {
-        responderRespuesta($controlador->crear($body));
+    if ($metodo === 'POST' && $docente === null) {
+        $controlador->manejarPost($body);
         exit;
     }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
+    if ($docente !== null && $termino !== null) {
+        $parametrosRuta = ['docente' => $docente, 'termino_clave' => $termino];
+        if ($metodo === 'PUT') {
+            $controlador->manejarPut($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'PATCH') {
+            $controlador->manejarPatch($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'DELETE') {
+            $controlador->manejarDelete($parametrosRuta);
+            exit;
+        }
+    }
+    responderMetodoNoPermitido();
 }
 
-if (preg_match('#^/api/termino_clave/([^/]+)$#', $uri, $coincidencias)) {
-    $termino = urldecode($coincidencias[1]);
-    $controlador = new ControladorTerminoClave();
+// --- /api/red_docente ----------------------------------------------
+if (preg_match('#^/api/red_docente(?:/([^/]+))?(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorRedDocente(crearServicioRedDocente($conexion));
+    $red = $m[1] ?? null;
+    $docente = $m[2] ?? null;
 
     if ($metodo === 'GET') {
-        responderRespuesta($controlador->obtener($termino));
+        $parametrosRuta = [];
+        if ($red !== null) {
+            $parametrosRuta['red'] = $red;
+        }
+        if ($docente !== null) {
+            $parametrosRuta['docente'] = $docente;
+        }
+        $controlador->manejarGet($parametrosRuta, $_GET);
         exit;
     }
-    if ($metodo === 'PUT') {
-        responderRespuesta($controlador->reemplazar($termino, $body));
+    if ($metodo === 'POST' && $red === null) {
+        $controlador->manejarPost($body);
         exit;
     }
-    if ($metodo === 'PATCH') {
-        responderRespuesta($controlador->actualizarParcial($termino, $body));
-        exit;
+    if ($red !== null && $docente !== null) {
+        $parametrosRuta = ['red' => $red, 'docente' => $docente];
+        if ($metodo === 'PUT') {
+            $controlador->manejarPut($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'PATCH') {
+            $controlador->manejarPatch($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'DELETE') {
+            $controlador->manejarDelete($parametrosRuta);
+            exit;
+        }
     }
-    if ($metodo === 'DELETE') {
-        responderRespuesta($controlador->eliminar($termino));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
+    responderMetodoNoPermitido();
 }
 
-// ===========================================================================
-// RECURSO: /api/linea_investigacion
-// ===========================================================================
-if (preg_match('#^/api/linea_investigacion$#', $uri)) {
-    $controlador = new ControladorLineaInvestigacion();
+// --- /api/estudio_ac -----------------------------------------------
+if (preg_match('#^/api/estudio_ac(?:/([^/]+))?(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorEstudioAc(crearServicioEstudioAc($conexion));
+    $estudio = $m[1] ?? null;
+    $area = $m[2] ?? null;
 
     if ($metodo === 'GET') {
-        responderRespuesta($controlador->listar($query));
+        $parametrosRuta = [];
+        if ($estudio !== null) {
+            $parametrosRuta['estudio'] = $estudio;
+        }
+        if ($area !== null) {
+            $parametrosRuta['area_conocimiento'] = $area;
+        }
+        $controlador->manejarGet($parametrosRuta, $_GET);
         exit;
     }
-    if ($metodo === 'POST') {
-        responderRespuesta($controlador->crear($body));
+    if ($metodo === 'POST' && $estudio === null) {
+        $controlador->manejarPost($body);
         exit;
     }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
+    if ($estudio !== null && $area !== null) {
+        $parametrosRuta = ['estudio' => $estudio, 'area_conocimiento' => $area];
+        if ($metodo === 'PUT') {
+            $controlador->manejarPut($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'PATCH') {
+            $controlador->manejarPatch($parametrosRuta, $body);
+            exit;
+        }
+        if ($metodo === 'DELETE') {
+            $controlador->manejarDelete($parametrosRuta);
+            exit;
+        }
+    }
+    responderMetodoNoPermitido();
+}
+
+// --- /api/apoyo_profesoral -----------------------------------------
+if (preg_match('#^/api/apoyo_profesoral(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorApoyoProfesoral(crearServicioApoyoProfesoral($conexion));
+    $estudios = $m[1] ?? null;
+    $this->despacharFicha($metodo, $estudios, $controlador, $_GET, $body, 'estudios');
     exit;
 }
 
-if (preg_match('#^/api/linea_investigacion/([^/]+)$#', $uri, $coincidencias)) {
-    $idTexto = urldecode($coincidencias[1]);
-
-    // El id de este recurso es entero. Si no lo es, respondemos 400.
-    if (!ctype_digit($idTexto)) {
-        responderJson(400, [
-            'estado'  => 400,
-            'mensaje' => 'El id debe ser un número entero.',
-        ]);
-        exit;
-    }
-    $id = (int) $idTexto;
-    $controlador = new ControladorLineaInvestigacion();
-
-    if ($metodo === 'GET') {
-        responderRespuesta($controlador->obtener($id));
-        exit;
-    }
-    if ($metodo === 'PUT') {
-        responderRespuesta($controlador->reemplazar($id, $body));
-        exit;
-    }
-    if ($metodo === 'PATCH') {
-        responderRespuesta($controlador->actualizarParcial($id, $body));
-        exit;
-    }
-    if ($metodo === 'DELETE') {
-        responderRespuesta($controlador->eliminar($id));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
+// --- /api/beca -----------------------------------------------------
+if (preg_match('#^/api/beca(?:/([^/]+))?$#', $ruta, $m)) {
+    $controlador = new ControladorBeca(crearServicioBeca($conexion));
+    $estudios = $m[1] ?? null;
+    $this->despacharFicha($metodo, $estudios, $controlador, $_GET, $body, 'estudios');
     exit;
 }
 
-// ===========================================================================
-// RECURSO: /api/programa
-// ===========================================================================
-if (preg_match('#^/api/programa$#', $uri)) {
-    $controlador = new ControladorPrograma();
+// ------------------------------------------------------------------
+// La v1 sigue respondiendo: sus cinco bloques se delegan sin tocarlos.
+// (Se asume que los bloques ya existen y aquí solo se marca el límite.)
+// ------------------------------------------------------------------
+require_once __DIR__ . '/rutas_v1.php';
 
-    if ($metodo === 'GET') {
-        responderRespuesta($controlador->listar($query));
-        exit;
-    }
-    if ($metodo === 'POST') {
-        responderRespuesta($controlador->crear($body));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
-}
-
-if (preg_match('#^/api/programa/([^/]+)$#', $uri, $coincidencias)) {
-    $idTexto = urldecode($coincidencias[1]);
-
-    if (!ctype_digit($idTexto)) {
-        responderJson(400, [
-            'estado'  => 400,
-            'mensaje' => 'El id debe ser un número entero.',
-        ]);
-        exit;
-    }
-    $id = (int) $idTexto;
-    $controlador = new ControladorPrograma();
-
-    if ($metodo === 'GET') {
-        responderRespuesta($controlador->obtener($id));
-        exit;
-    }
-    if ($metodo === 'PUT') {
-        responderRespuesta($controlador->reemplazar($id, $body));
-        exit;
-    }
-    if ($metodo === 'PATCH') {
-        responderRespuesta($controlador->actualizarParcial($id, $body));
-        exit;
-    }
-    if ($metodo === 'DELETE') {
-        responderRespuesta($controlador->eliminar($id));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
-}
-
-// ===========================================================================
-// RECURSO: /api/red
-// ===========================================================================
-if (preg_match('#^/api/red$#', $uri)) {
-    $controlador = new ControladorRed();
-
-    if ($metodo === 'GET') {
-        responderRespuesta($controlador->listar($query));
-        exit;
-    }
-    if ($metodo === 'POST') {
-        responderRespuesta($controlador->crear($body));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
-}
-
-if (preg_match('#^/api/red/([^/]+)$#', $uri, $coincidencias)) {
-    $idrTexto = urldecode($coincidencias[1]);
-
-    if (!ctype_digit($idrTexto)) {
-        responderJson(400, [
-            'estado'  => 400,
-            'mensaje' => 'El idr debe ser un número entero.',
-        ]);
-        exit;
-    }
-    $idr = (int) $idrTexto;
-    $controlador = new ControladorRed();
-
-    if ($metodo === 'GET') {
-        responderRespuesta($controlador->obtener($idr));
-        exit;
-    }
-    if ($metodo === 'PUT') {
-        responderRespuesta($controlador->reemplazar($idr, $body));
-        exit;
-    }
-    if ($metodo === 'PATCH') {
-        responderRespuesta($controlador->actualizarParcial($idr, $body));
-        exit;
-    }
-    if ($metodo === 'DELETE') {
-        responderRespuesta($controlador->eliminar($idr));
-        exit;
-    }
-    responderJson(405, [
-        'estado'  => 405,
-        'mensaje' => 'Método no permitido para esta ruta.',
-    ]);
-    exit;
-}
-
-// ===========================================================================
-// RUTA NO ENCONTRADA
-// ===========================================================================
+// ------------------------------------------------------------------
+// Si nada de lo anterior hizo match:
+// ------------------------------------------------------------------
 responderJson(404, [
-    'estado'  => 404,
-    'mensaje' => 'Ruta no encontrada.',
-    'detalle' => "No existe el recurso {$uri}",
+    'estado' => 404,
+    'mensaje' => 'La ruta solicitada no existe.',
+    'detalle' => '',
 ]);
-exit;
 
-// ===========================================================================
-// FUNCIONES AUXILIARES
-// ===========================================================================
-
-/**
- * Responde un JSON con el código HTTP indicado. Se usa para el endpoint
- * de diagnóstico, los 404, los 405 y demás respuestas "planas".
- */
-function responderJson(int $codigo, array $cuerpo): void
-{
-    http_response_code($codigo);
-    echo json_encode($cuerpo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-}
+// ------------------------------------------------------------------
+// Auxiliares
+// ------------------------------------------------------------------
 
 /**
- * Responde lo que devolvió un controlador. Si el código es 204, NO se
- * envía cuerpo (así lo exige el contrato §1: "204 sin cuerpo"). El
- * http_response_code(204) además le dice al cliente que ignore el body.
+ * Despacha las cinco operaciones estándar de una ficha con `id` o llave
+ * simple en la ruta. No se usa para las puentes con PK compuesta.
  */
-function responderRespuesta(array $respuesta): void
-{
-    $codigo = $respuesta['codigo'];
-    $cuerpo = $respuesta['cuerpo'];
-
-    http_response_code($codigo);
-
-    if ($codigo === 204 || $cuerpo === null) {
+function despacharFicha(
+    string $metodo,
+    ?string $llave,
+    object $controlador,
+    array $query,
+    array $body,
+    string $nombreLlave = 'id'
+): void {
+    if ($metodo === 'GET') {
+        $parametrosRuta = $llave !== null ? [$nombreLlave => $llave] : [];
+        $controlador->manejarGet($parametrosRuta, $query);
         return;
     }
+    if ($metodo === 'POST' && $llave === null) {
+        $controlador->manejarPost($body);
+        return;
+    }
+    if ($llave !== null) {
+        $parametrosRuta = [$nombreLlave => $llave];
+        if ($metodo === 'PUT') {
+            $controlador->manejarPut($parametrosRuta, $body);
+            return;
+        }
+        if ($metodo === 'PATCH') {
+            $controlador->manejarPatch($parametrosRuta, $body);
+            return;
+        }
+        if ($metodo === 'DELETE') {
+            $controlador->manejarDelete($parametrosRuta);
+            return;
+        }
+    }
+    responderMetodoNoPermitido();
+}
 
-    echo json_encode($cuerpo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+function responderMetodoNoPermitido(): void
+{
+    responderJson(405, [
+        'estado' => 405,
+        'mensaje' => 'Método no permitido para esta ruta.',
+        'detalle' => '',
+    ]);
+    exit;
+}
+
+function responderJson(int $codigo, mixed $cuerpo): void
+{
+    http_response_code($codigo);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($cuerpo, JSON_UNESCAPED_UNICODE);
 }
