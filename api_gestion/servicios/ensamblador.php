@@ -1,100 +1,104 @@
 <?php
 declare(strict_types=1);
 
-// ---------------------------------------------------------------------------
-// REQUIRES
-// El ensamblador necesita conocer TODAS las clases concretas (los servicios
-// y los repositorios MariaDB) porque es el único punto del sistema que las
-// instancia. Por eso los carga todos aquí.
-// ---------------------------------------------------------------------------
+require_once __DIR__ . '/ServicioDocente.php';
+require_once __DIR__ . '/ServicioEstudiosRealizados.php';
+require_once __DIR__ . '/ServicioDocenteDepartamento.php';
+require_once __DIR__ . '/ServicioInteresesFuturos.php';
+require_once __DIR__ . '/ServicioEvaluacionDocente.php';
+require_once __DIR__ . '/ServicioReconocimiento.php';
+require_once __DIR__ . '/ServicioExperiencia.php';
+require_once __DIR__ . '/ServicioRedDocente.php';
+require_once __DIR__ . '/ServicioEstudioAc.php';
+require_once __DIR__ . '/ServicioApoyoProfesoral.php';
+require_once __DIR__ . '/ServicioBeca.php';
 
-// Repositorios concretos
-require_once __DIR__ . '/../repositorios/RepositorioAreaConocimientoMariaDB.php';
-require_once __DIR__ . '/../repositorios/RepositorioTerminoClaveMariaDB.php';
-require_once __DIR__ . '/../repositorios/RepositorioLineaInvestigacionMariaDB.php';
-require_once __DIR__ . '/../repositorios/RepositorioProgramaMariaDB.php';
-require_once __DIR__ . '/../repositorios/RepositorioRedMariaDB.php';
-
-// Servicios concretos
-require_once __DIR__ . '/ServicioAreaConocimiento.php';
-require_once __DIR__ . '/ServicioTerminoClave.php';
-require_once __DIR__ . '/ServicioLineaInvestigacion.php';
-require_once __DIR__ . '/ServicioPrograma.php';
-require_once __DIR__ . '/ServicioRed.php';
+require_once __DIR__ . '/../repositorios/RepositorioDocenteMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioEstudiosRealizadosMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioDocenteDepartamentoMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioInteresesFuturosMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioEvaluacionDocenteMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioReconocimientoMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioExperienciaMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioRedDocenteMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioEstudioAcMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioApoyoProfesoralMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioBecaMariaDB.php';
 
 /**
- * ---------------------------------------------------------------------------
- * ¿Qué es este archivo?
- *   Es el ENSAMBLADOR: el único lugar del proyecto donde se juntan las
- *   interfaces con sus implementaciones concretas. Es la pieza que hace
- *   realidad la inversión de dependencias del Artículo 5 de la
- *   constitución.
+ * ensamblador.php
  *
- * ¿Qué papel cumple en la arquitectura?
- *   Los controladores (Fase 5) no instancian repositorios MariaDB ni
- *   servicios concretos: le piden al ensamblador el servicio que
- *   necesitan. El ensamblador es quien decide qué repositorio concreto
- *   usar (hoy MariaDB) y se lo inyecta al servicio.
+ * El ÚNICO lugar del proyecto donde se juntan las clases concretas
+ * (servicios + repositorios MariaDB) con las interfaces. Cada controlador
+ * pide aquí su servicio y no sabe qué implementación recibió.
  *
- *   En v1 solo existe un motor, así que el ensamblador es sencillo: una
- *   función por servicio que crea el repositorio MariaDB correspondiente
- *   y lo enchufa en el servicio. Cuando llegue v3 con PostgreSQL, este
- *   archivo será el único que cambie — esa es exactamente la promesa del
- *   principio abierto/cerrado.
+ * Se usan FUNCIONES EXPLÍCITAS, una por recurso, y no un switch ni nombres
+ * de clase armados con texto como "Repositorio{$recurso}MariaDB". Las razones
+ * están en 3_plan §4.7:
+ *   - con funciones explícitas, PHP verifica tipos y el error sale al
+ *     llamarlas;
+ *   - con nombres armados en texto, el error sale en producción, cuando
+ *     alguien pida el recurso que nadie probó;
+ *   - y quien lea este archivo ve el inventario completo sin ejecutar nada.
  *
- * ¿Por qué una función por servicio y no una función genérica?
- *   Porque la API es específica (Artículo 10): cada recurso tiene su
- *   propio ensamblaje, con su propio repositorio concreto. Una función
- *   genérica tendría que recibir el nombre del recurso como parámetro y
- *   hacer magia adentro — justo lo que el proyecto evita.
- * ---------------------------------------------------------------------------
+ * Cuando la v3 traiga el segundo motor, ESTE archivo —y solo éste— se
+ * convierte en una fábrica de verdad.
+ *
+ * Cada función recibe la PDO ya construida (obtenerConexion()), para que
+ * el controlador no tenga que saber cómo se arma la conexión.
  */
 
-/**
- * Devuelve un ServicioAreaConocimiento ya ensamblado con su repositorio
- * MariaDB. Cada llamada crea un repositorio nuevo, pero la conexión PDO
- * de adentro se reutiliza (Conexion::obtener() es perezosa y estática
- * dentro del proceso).
- */
-function crearServicioAreaConocimiento(): ServicioAreaConocimiento
+function crearServicioDocente(PDO $conexion): IServicioDocente
 {
-    $repositorio = new RepositorioAreaConocimientoMariaDB();
-    return new ServicioAreaConocimiento($repositorio);
+    return new ServicioDocente(new RepositorioDocenteMariaDB($conexion));
 }
 
-/**
- * Devuelve un ServicioTerminoClave ensamblado con su repositorio MariaDB.
- */
-function crearServicioTerminoClave(): ServicioTerminoClave
+function crearServicioEstudiosRealizados(PDO $conexion): IServicioEstudiosRealizados
 {
-    $repositorio = new RepositorioTerminoClaveMariaDB();
-    return new ServicioTerminoClave($repositorio);
+    return new ServicioEstudiosRealizados(new RepositorioEstudiosRealizadosMariaDB($conexion));
 }
 
-/**
- * Devuelve un ServicioLineaInvestigacion ensamblado con su repositorio
- * MariaDB.
- */
-function crearServicioLineaInvestigacion(): ServicioLineaInvestigacion
+function crearServicioDocenteDepartamento(PDO $conexion): IServicioDocenteDepartamento
 {
-    $repositorio = new RepositorioLineaInvestigacionMariaDB();
-    return new ServicioLineaInvestigacion($repositorio);
+    return new ServicioDocenteDepartamento(new RepositorioDocenteDepartamentoMariaDB($conexion));
 }
 
-/**
- * Devuelve un ServicioPrograma ensamblado con su repositorio MariaDB.
- */
-function crearServicioPrograma(): ServicioPrograma
+function crearServicioInteresesFuturos(PDO $conexion): IServicioInteresesFuturos
 {
-    $repositorio = new RepositorioProgramaMariaDB();
-    return new ServicioPrograma($repositorio);
+    return new ServicioInteresesFuturos(new RepositorioInteresesFuturosMariaDB($conexion));
 }
 
-/**
- * Devuelve un ServicioRed ensamblado con su repositorio MariaDB.
- */
-function crearServicioRed(): ServicioRed
+function crearServicioEvaluacionDocente(PDO $conexion): IServicioEvaluacionDocente
 {
-    $repositorio = new RepositorioRedMariaDB();
-    return new ServicioRed($repositorio);
+    return new ServicioEvaluacionDocente(new RepositorioEvaluacionDocenteMariaDB($conexion));
+}
+
+function crearServicioReconocimiento(PDO $conexion): IServicioReconocimiento
+{
+    return new ServicioReconocimiento(new RepositorioReconocimientoMariaDB($conexion));
+}
+
+function crearServicioExperiencia(PDO $conexion): IServicioExperiencia
+{
+    return new ServicioExperiencia(new RepositorioExperienciaMariaDB($conexion));
+}
+
+function crearServicioRedDocente(PDO $conexion): IServicioRedDocente
+{
+    return new ServicioRedDocente(new RepositorioRedDocenteMariaDB($conexion));
+}
+
+function crearServicioEstudioAc(PDO $conexion): IServicioEstudioAc
+{
+    return new ServicioEstudioAc(new RepositorioEstudioAcMariaDB($conexion));
+}
+
+function crearServicioApoyoProfesoral(PDO $conexion): IServicioApoyoProfesoral
+{
+    return new ServicioApoyoProfesoral(new RepositorioApoyoProfesoralMariaDB($conexion));
+}
+
+function crearServicioBeca(PDO $conexion): IServicioBeca
+{
+    return new ServicioBeca(new RepositorioBecaMariaDB($conexion));
 }
