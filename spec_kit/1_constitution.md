@@ -170,3 +170,21 @@ lo mantiene un equipo dedicado, y quien lo usa no escribe endpoints, escribe
 consultas. Eso no es «una API genérica hecha en casa» — es otra cosa.
 
 En este curso, entonces: una ruta por recurso, con sus campos escritos.
+
+## Artículo 11 — La base de datos también es parte del sistema
+
+Parte de las reglas del negocio **vive en la base**: llaves foráneas que
+impiden referencias rotas, procedimientos que hacen varias escrituras como si fueran una.
+
+La API **no las repite y no las contradice**:
+
+- No comprueba en PHP lo que una llave foránea ya defiende. Preguntar antes
+  («¿existe esa persona?») no evita el problema —entre la pregunta y la
+  escritura, otro puede borrarla— y además obliga a mantener la misma regla
+  en dos idiomas.
+- No calcula pero SÍ **traduce** lo que la base responde: el rechazo del motor sale de la API
+  como un mensaje en español, no como un número de error ni como un 500.
+
+El precio es real y hay que decirlo: parte del sistema queda escrita en un
+dialecto de SQL, y por eso vive en clases que llevan el nombre del motor. La
+versión 3 pondrá esa decisión a prueba.
