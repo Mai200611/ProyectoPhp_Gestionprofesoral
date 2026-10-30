@@ -1,0 +1,118 @@
+# docker-compose.yml
+# ---------------------------------------------------------------------------
+# ¿Qué es este archivo?
+#   Es el "director de orquesta" del proyecto. Con UN SOLO comando
+#   (`docker compose up -d --build`) levanta todo el sistema de la v1:
+#   la base de datos, la API y el front.
+#
+# ¿Por qué `name: mi_v1_programa`?
+#   Para que Docker trate este proyecto como algo DISTINTO al del curso:
+#   contenedores, redes y volúmenes separados, aunque las carpetas se
+#   llamen parecido. Los dos conviven sin pisarse.
+#
+# ¿Por qué los puertos del host van con +100?
+#   El compose original publica 8020/8022/13326. Como aquí los dos
+#   proyectos estarán encendidos a la vez, movemos los del host a
+#   8120/8122/13426. ADENTRO de los contenedores todo queda igual:
+#   MariaDB sigue en 3306, la API en 8113, el front en 8020.
+# ---------------------------------------------------------------------------
+
+name: mi_v1_programa
+
+services:
+
+  # -------------------------------------------------------------------------
+  # SERVICIO: mariadb
+  # La base de datos. El script db/init.sql se monta tal cual.
+  # -------------------------------------------------------------------------
+  mariadb:
+    image: mariadb:11
+    container_name: mi_v1_programa_mariadb
+
+    environment:
+      MARIADB_ROOT_PASSWORD: paradigmas123
+      MARIADB_DATABASE: bdgestion_mariadb_local
+      MARIADB_USER: paradigmas
+      MARIADB_PASSWORD: paradigmas123
+
+    ports:
+      - "13426:3306"
+
+    volumes:
+      - mariadbdata:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # SERVICIO: api-gestion
+  # La API en PHP 8.3 puro. Habla con MariaDB a través de PDO.
+  # -------------------------------------------------------------------------
+  api-gestion:
+    build:
+      context: ./api_gestion
+      dockerfile: Dockerfile
+
+    container_name: mi_v1_programa_api
+
+    volumes:
+      - ./api_gestion:/app
+
+    # Host 8122 → contenedor 8113.
+    ports:
+      - "8122:8113"
+
+    environment:
+      DB_DSN: "mysql:host=mariadb;port=3306;dbname=bdgestion_mariadb_local"
+      DB_USUARIO: "paradigmas"
+      DB_CLAVE: "paradigmas123"
+
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # SERVICIO: front-php
+  # El front en PHP 8.3 puro. NO tiene acceso a MariaDB: solo habla HTTP
+  # con la API. La ausencia de pdo_mysql y de las credenciales DB_* es
+  # deliberada y es lo que hace cumplir el Artículo 3.
+  # -------------------------------------------------------------------------
+  front-php:
+    build:
+      context: ./front_php
+      dockerfile: Dockerfile
+
+    container_name: mi_v1_programa_front
+
+    volumes:
+      - ./front_php:/app
+
+    # Host 8120 → contenedor 8020.
+    ports:
+      - "8120:8020"
+
+    environment:
+      # La URL interna del compose: nombre del servicio + puerto del
+      # contenedor. NUNCA localhost: dentro del contenedor del front,
+      # localhost es él mismo.
+      URL_API: "http://api-gestion:8113"
+
+    depends_on:
+      - api-gestion
+
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# VOLÚMENES NOMBRADOS
+# ---------------------------------------------------------------------------
+volumes:
+  mariadbdata:
