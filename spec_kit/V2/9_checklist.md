@@ -1,4 +1,4 @@
-# Lista de chequeo de requisitos — Versión 1
+# Lista de chequeo de requisitos — Versión 2
 
 > **La compuerta 3** del método (ver [SDD_SPECKIT](../../../SDD_SPECKIT.md)). Esta lista
 > revisa **la ESPECIFICACIÓN, no el código**: se pasa cuando los documentos
@@ -22,76 +22,93 @@
 
 ## A. Claridad — ¿dice UNA sola cosa?
 
-- [x] Ningún requisito usa palabras sin definir: *rápido, amigable,
+- [X] Ningún requisito usa palabras sin definir: *rápido, amigable,
       eficiente, correcto, adecuado, robusto*.
-- [x] No queda ningún marcador `[NECESITA ACLARACIÓN: …]` sin resolver en
+- [X] No queda ningún marcador `[NECESITA ACLARACIÓN: …]` sin resolver en
       la sección de **Clarificaciones** de [2_spec.md](2_spec.md).
-- [x] Cada RF explica UNA cosa. Si uno necesita un "y" para entenderse, se
+- [X] Cada RF explica UNA cosa. Si uno necesita un "y" para entenderse, se
       partió en dos.
-- [x] Los RF no mencionan tecnología ni nombres de clase: el QUÉ está
+- [X] Los RF no mencionan tecnología ni nombres de clase: el QUÉ está
       separado del CÓMO, que vive en [3_plan.md](3_plan.md).
 
 ## B. Medible — ¿se puede verificar?
 
-- [x] Cada criterio de aceptación de [2_spec.md](2_spec.md) dice un **valor
+- [X] Cada criterio de aceptación de [2_spec.md](2_spec.md) dice un **valor
       concreto**: un número, un código de estado o un texto exacto.
-- [x] Cada criterio se puede comprobar con **un comando** de
+- [X] Cada criterio se puede comprobar con **un comando** de
       [7_quickstart.md](7_quickstart.md). Si no hay comando posible, no es
       criterio.
-- [x] Los códigos de error están dichos por su número (400, 404, 422,
+- [X] Los códigos de error están dichos por su número (400, 404, 422,
       500), no como "responde con un error".
 
 ## C. Completitud — ¿falta algo?
 
-- [x] Los RF cubren todo lo que promete el propósito: nada del alcance
+- [X] Los RF cubren todo lo que promete el propósito: nada del alcance
       quedó sin requisito.
-- [x] [2_spec.md](2_spec.md) tiene su **NO incluye** explícito.
-- [x] Cada entrada de [6_contracts.md](6_contracts.md) documenta sus
+- [X] [2_spec.md](2_spec.md) tiene su **NO incluye** explícito.
+- [X] Cada entrada de [6_contracts.md](6_contracts.md) documenta sus
       desenlaces de **ERROR**, no solo el camino feliz.
-- [x] [5_data_model.md](5_data_model.md) trae los **datos exactos** de los
+- [X] [6_contracts.md](6_contracts.md) dice el nombre EXACTO de cada campo
+      **en el JSON**, no solo el de la columna. Se parecen, pero no siempre
+      son iguales — y quien reconstruye el sistema copia del contrato.
+- [X] Cada rechazo de integridad que la especificación promete tiene su
+      **mensaje en español** escrito, no solo su código.
+- [X] [5_data_model.md](5_data_model.md) trae los **datos exactos** de los
       que dependen los comandos del smoke test.
-- [x] **La versión tiene su front especificado**, no solo su API: hay
+- [X] **La versión tiene su front especificado**, no solo su API: hay
       requisitos de lo que la persona ve y hace, y [6_contracts.md](6_contracts.md)
       dice qué pantalla existe y qué le pide a la API (Artículo 1.1 de la
       [constitución](../../1_constitution.md)).
-- [x] Está dicho **qué hace la pantalla cuando la API no responde** — no
+- [X] Está dicho **qué hace la pantalla cuando la API no responde** — no
       basta con el camino feliz.
-- [x] Está dicho **qué hace la pantalla cuando no hay filas**, y que eso no
+- [X] Está dicho **qué hace la pantalla cuando no hay filas**, y que eso no
       es un error.
-- [x] Cada decisión de [4_research.md](4_research.md) tiene al menos una
+- [X] Cada decisión de [4_research.md](4_research.md) tiene al menos una
       alternativa descartada con su razón.
 
 ## D. Coherencia — ¿los documentos dicen lo mismo?
 
-- [x] Todo RF de [2_spec.md](2_spec.md) aparece en
+- [X] Todo RF de [2_spec.md](2_spec.md) aparece en
       [6_contracts.md](6_contracts.md).
-- [x] Todo lo que promete [6_contracts.md](6_contracts.md) tiene una tarea
+- [X] Todo lo que promete [6_contracts.md](6_contracts.md) tiene una tarea
       que lo construye en [8_tasks.md](8_tasks.md).
-- [x] Todo criterio de aceptación tiene su comando en
+- [X] Todo criterio de aceptación tiene su comando en
       [7_quickstart.md](7_quickstart.md), **con el mismo número**.
-- [x] Cada pantalla de [6_contracts.md](6_contracts.md) §9 usa un endpoint
+- [X] Cada pantalla de [6_contracts.md](6_contracts.md) §9 usa un endpoint
       que existe en las secciones de arriba del mismo documento — y ninguna
       inventa uno.
-- [x] Los ejemplos de [6_contracts.md](6_contracts.md) usan datos que
+- [X] Los ejemplos de [6_contracts.md](6_contracts.md) usan datos que
       existen en [5_data_model.md](5_data_model.md).
-- [x] [3_plan.md](3_plan.md) no nombra ningún archivo que ninguna tarea
+- [X] [3_plan.md](3_plan.md) no nombra ningún archivo que ninguna tarea
       construya, y ninguna tarea construye un archivo que el plan no liste.
-- [x] El **Chequeo de constitución** de [3_plan.md](3_plan.md) está
+- [X] El **Chequeo de constitución** de [3_plan.md](3_plan.md) está
       completo: artículo por artículo, sin saltarse ninguno.
 
 
 ## E. Alcance — ¿no se está anticipando?
 
-- [x] Ningún documento nombra entidades, motores o pantallas fuera del
+- [X] Ningún documento nombra entidades, motores o pantallas fuera del
       alcance declarado en [2_spec.md](2_spec.md).
-- [x] **Ninguna ruta es genérica**: no aparece `/api/{tabla}` ni nada que
+- [X] **Ninguna ruta es genérica**: no aparece `/api/{tabla}` ni nada que
       reciba el nombre del recurso como parámetro, ni en la API ni en el
       cliente del front (Artículo 10 de la
       [constitución](../../1_constitution.md)).
-- [x] Ningún documento anticipa una versión futura (Artículo 1 de la
+- [X] **Ningún recurso tiene operaciones que no le corresponden.** Si la
+      especificación le da a un recurso un verbo que su negocio no admite
+      —un PATCH de factura, por ejemplo— se está describiendo la comodidad
+      de quien programa, no lo que la cosa hace.
+- [X] **El dialecto del motor no aparece fuera de la capa de datos.** Ni un
+      `SELECT`, ni un nombre de procedimiento, ni un número de error del
+      motor en un servicio, un controlador o una vista (RNF5). Es lo que la
+      v3 va a poner a prueba: si algo se filtró, se descubre allá y ya es
+      tarde.
+- [X] **Está dicho quién escribe cada columna.** Para cada campo: lo escribe
+      el cliente, lo genera la base, o lo calcula un trigger. Un campo cuyo
+      dueño no está declarado acaba escrito por dos.
+- [X] Ningún documento anticipa una versión futura (Artículo 1 de la
       [constitución](../../1_constitution.md): lo que no pide esta versión, no se
       escribe).
-- [x] Las dependencias que nombra [3_plan.md](3_plan.md) son exactamente
+- [X] Las dependencias que nombra [3_plan.md](3_plan.md) son exactamente
       las que permite la constitución.
 
 ---
@@ -100,9 +117,9 @@
 
 | | |
 |---|---|
-| **Revisada por** | Sara Pabón González, Miguel Angel Hincapié |
-| **Fecha** | 2/10/2026 |
-| **Casillas en rojo** | |
+| **Revisada por** | Sara Pabón González Y Miguel álngel Hincapie |
+| **Fecha** | 30 de octubre del 2026 |
+| **Casillas en rojo** | 0 |
 | **Veredicto** | ⬜ En verde: puede empezar el código · ⬜ En rojo: vuelve a la spec |
 
 > Si el veredicto es rojo, anote aquí qué documento hay que corregir y por
