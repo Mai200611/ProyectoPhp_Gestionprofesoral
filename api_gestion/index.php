@@ -39,7 +39,7 @@ require_once __DIR__ . '/controladores/ControladorRedDocente.php';
 require_once __DIR__ . '/controladores/ControladorEstudioAc.php';
 require_once __DIR__ . '/controladores/ControladorApoyoProfesoral.php';
 require_once __DIR__ . '/controladores/ControladorBeca.php';
-require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/config/conexion.php';
 
 // ------------------------------------------------------------------
 // Diagnóstico: GET /
