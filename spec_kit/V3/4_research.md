@@ -119,13 +119,13 @@ otra base.
 ## D7 — Se aprovechó para unificar un nombre de método
 
 **Qué pasó:** al escribir cada repositorio por segunda vez se hizo evidente
-que `producto` llamaba `obtenerPorCodigo` a su método de lectura, mientras los
+que `docente` llamaba `obtenerPorCedula` a su método de lectura, mientras los
 cinco recursos de la v2 lo llamaban `obtenerPorClave`. Dos nombres para lo
 mismo, en seis interfaces, sin ninguna razón.
 
 **Decisión:** unificar en `obtenerPorClave`.
-**Por qué ese nombre y no el otro:** dos de los seis recursos tienen una llave
-numérica (`id`), y llamarla «código» habría sido mentir.
+**Por qué ese nombre y no el otro:** diecisiete de los diecinueve recursos tienen una llave
+numérica (`cedula` o `id`, por ejemplo), y llamarla «código» habría sido mentir.
 
 **Por qué se hizo en esta versión y no se dejó pasar:** porque es exactamente
 el tipo de cosa que el segundo motor saca a la luz. Escribir algo una vez
