@@ -19,7 +19,7 @@ Ni una dependencia nueva de PHP. Lo que se agrega es un motor y un driver.
 | Front | sin cambios | + la etiqueta del motor en el pie |
 
 **Una sola imagen para los dos motores**, y no dos. Es deliberado: el punto de
-la versión es que **es el mismo programa**. Dos imágenes lo habrían escondido.
+la versión es que **es el mismo programa**. Dos imágenes lo habrían escondido.                
 
 ## 2. Estructura de carpetas
 
