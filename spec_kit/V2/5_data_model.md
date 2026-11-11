@@ -216,7 +216,7 @@ dos veces en el mismo formulario. Esa regla no está en ninguna línea de PHP.
 | `institucion` | VARCHAR(45) | NOT NULL | Institución de la experiencia |
 | `tipo` | VARCHAR(45) | NOT NULL | Tipo de experiencia |
 | `fecha_inicio` | DATE | NOT NULL | Fecha de inico de la experiencia |
-| `fecha_fin` | DATE) | | Fecha de fin de la experiencia |
+| `fecha_fin` | DATE | | Fecha de fin de la experiencia |
 | `activo` | BOOLEAN | NOT NULL DEFAULT TRUE | Estado de actividad de la experiencia |
 | `docente` | INTEGER | **FK → docente** y NOT NULL | Id del docente |
 
@@ -265,6 +265,36 @@ dos veces en el mismo formulario. Esa regla no está en ninguna línea de PHP.
 | `fecha_inicio` | DATE | NOT NULL | Fecha de inico de la beca |
 | `fecha_fin` | DATE | | Fecha de fin de la beca |
 | `activo` | BOOLEAN | NOT NULL DEFAULT TRUE | Estado de actividad de apoyo_profesoral |
+
+### 3.17 `rol`
+
+| Columna | Tipo | Restricción | Quién lo escribe |
+|---|---|---|---|
+| `id` | INTEGER | **PK, AUTO_INCREMENT** | Id de rol |
+| `nombre` | VARCHAR(100) | NOT NULL UNIQUE | Nombre del rol |
+| `descripción` | TEXT | | Descripción del rol |
+| `activo` | TINYBIT(1) | DEFAULT 1 | Estado de actividad de rol |
+| `fecha_creacion` | DATE | DEFAULT CURRENT_TIMESTAMP | Fecha de creación del rol |
+
+### 3.18 `usuario`
+
+| Columna | Tipo | Restricción | Quién lo escribe |
+|---|---|---|---|
+| `id` | INTEGER | **PK, AUTO_INCREMENT** | Id de la experiencia |
+| `username` | VARCHAR(100) | NOT NULL UNIQUE | Nombre de usuario del usuario |
+| `password` | VARCHAR(255) | NOT NULL | Contraseña del usuario |
+| `email` | VARCHAR(150) | NOT NULL UNIQUE | Email del usuario |
+| `nombre_completo` | VARCHAR(200) | | Nombre completo del usuario |
+| `activo` | TINYBIT(1) | DEFAULT 1 | Estado de actividad de usuario |
+| `fecha_creacion` | DATE | DEFAULT CURRENT_TIMESTAMP | Fecha de creación del usuario |
+| `fecha_actualizacion` | DATE | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Fecha de actualización del usuario |
+
+### 3.19 `intereses_futuros`
+
+| Columna | Tipo | Restricción | Descripción |
+|---|---|---|---|
+| `usuario_id` | INTEGER | **PK**, **FK → usuario** NOT NULL ON DELETE CASCADE | Id del usuario |
+| `rol_id` | VARCHAR(30) | **PK**, **FK → rol** NOT NULL ON DELETE CASCADE | Id de rol |
 
 ## 4. La lógica que vive en la base
 
