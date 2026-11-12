@@ -216,7 +216,7 @@ dos veces en el mismo formulario. Esa regla no está en ninguna línea de PHP.
 | `institucion` | VARCHAR(45) | NOT NULL | Institución de la experiencia |
 | `tipo` | VARCHAR(45) | NOT NULL | Tipo de experiencia |
 | `fecha_inicio` | DATE | NOT NULL | Fecha de inico de la experiencia |
-| `fecha_fin` | DATE) | | Fecha de fin de la experiencia |
+| `fecha_fin` | DATE | | Fecha de fin de la experiencia |
 | `activo` | BOOLEAN | NOT NULL DEFAULT TRUE | Estado de actividad de la experiencia |
 | `docente` | INTEGER | **FK → docente** y NOT NULL | Id del docente |
 
