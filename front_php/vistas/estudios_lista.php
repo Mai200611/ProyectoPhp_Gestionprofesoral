@@ -1,65 +1,48 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1); ?>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 m-0">Estudios Realizados</h1>
+    <a href="/estudios/nuevo" class="btn btn-primary">Agregar</a>
+</div>
 
-/**
- * estudios_lista.php
- *
- * Listado de estudios realizados. Patrón de ficha con id autogenerado.
- */
-
-/**
- * @param array{ok:bool, datos:array, mensaje:string, errores:array, id:?int}|null $resultado
- */
-function vistaListaEstudios(?array $resultado, string $avisoExito = ''): void
-{
-    $datos = $resultado['datos'] ?? [];
-    $avisoError = '';
-    if ($resultado !== null && !$resultado['ok']) {
-        $avisoError = $resultado['mensaje'];
-    }
-
-    plantillaInicio('Estudios realizados');
-
-    if ($avisoExito !== '') {
-        echo '<div class="alert alert-success">' . htmlspecialchars($avisoExito) . '</div>';
-    }
-    if ($avisoError !== '') {
-        echo '<div class="alert alert-danger">' . htmlspecialchars($avisoError) . '</div>';
-    }
-
-    echo '<div class="d-flex justify-content-between align-items-center mb-3">';
-    echo '<h1 class="h3 m-0">Estudios realizados</h1>';
-    echo '<a class="btn btn-primary" href="/estudios/nuevo">Agregar estudio</a>';
-    echo '</div>';
-
-    if ($datos === []) {
-        echo '<div class="alert alert-info">Todavía no hay estudios. ';
-        echo '<a href="/estudios/nuevo">Cree el primero</a>.</div>';
-        plantillaFin();
-        return;
-    }
-
-    echo '<table class="table table-striped align-middle">';
-    echo '<thead><tr>';
-    echo '<th>Identificador</th><th>Título</th><th>Universidad</th><th>Tipo</th><th class="text-end">Acciones</th>';
-    echo '</tr></thead><tbody>';
-
-    foreach ($datos as $fila) {
-        $id = (string) ($fila['id'] ?? '');
-        echo '<tr>';
-        echo '<td>' . htmlspecialchars($id) . '</td>';
-        echo '<td>' . htmlspecialchars((string) ($fila['titulo'] ?? '')) . '</td>';
-        echo '<td>' . htmlspecialchars((string) ($fila['universidad'] ?? '')) . '</td>';
-        echo '<td>' . htmlspecialchars((string) ($fila['tipo'] ?? '')) . '</td>';
-        echo '<td class="text-end">';
-        echo '<a class="btn btn-sm btn-outline-primary" href="/estudios/' . rawurlencode($id) . '/editar">Editar</a> ';
-        echo '<form method="post" action="/estudios/' . rawurlencode($id) . '/eliminar" class="d-inline" '
-            . 'onsubmit="return confirm(\'¿Eliminar este estudio?\');">';
-        echo '<button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>';
-        echo '</form>';
-        echo '</td></tr>';
-    }
-
-    echo '</tbody></table>';
-    plantillaFin();
-}
+<?php if (!$ok): ?>
+    <div class="alert alert-warning" role="alert">
+        <?php foreach ($errores as $e): ?>
+            <div><?= htmlspecialchars((string) $e, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endforeach; ?>
+    </div>
+<?php elseif (empty($estudios)): ?>
+    <div class="alert alert-info" role="alert">
+        Todavía no hay estudios registrados. 
+        <a href="/estudios/nuevo" class="alert-link">Puede agregar el primero</a>.
+    </div>
+<?php else: ?>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle bg-white">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Universidad</th>
+                    <th>Tipo</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($estudios as $e): ?>
+                    <tr>
+                        <td><?= htmlspecialchars((string) ($e['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string) ($e['titulo'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string) ($e['universidad'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string) ($e['tipo'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="/estudios/<?= urlencode((string) ($e['id'] ?? '')) ?>/editar">Editar</a>
+                            <form method="post" action="/estudios/<?= urlencode((string) ($e['id'] ?? '')) ?>/eliminar" class="d-inline" onsubmit="return confirm('¿Eliminar este estudio?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>

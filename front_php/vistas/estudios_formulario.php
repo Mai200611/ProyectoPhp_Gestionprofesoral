@@ -1,85 +1,66 @@
-<?php
-declare(strict_types=1);
+<?php 
+declare(strict_types=1); 
+$esEditar = ($modo === 'editar');
+$accion = $esEditar ? '/estudios/' . urlencode((string) ($estudio['id'] ?? '')) . '/editar' : '/estudios/nuevo';
+?>
 
-/**
- * estudios_formulario.php
- *
- * Formulario de alta / edición de un estudio realizado.
- * El campo «docente» es un desplegable con cédula — nombre completo (RF17).
- * En edición hay dos botones: reemplazar completo / actualizar solo lo cambiado.
- *
- * @param array<string, mixed>|null $estudio
- * @param array<int, array<string, mixed>> $docentes
- * @param array<string, mixed> $valores
- * @param array{ok:bool, datos:array, mensaje:string, errores:array, id:?int}|null $resultado
- */
-function vistaFormularioEstudio(
-    ?array $estudio,
-    array $docentes,
-    array $valores = [],
-    ?array $resultado = null
-): void {
-    $esEdicion = $estudio !== null;
-    $id = (string) ($estudio['id'] ?? '');
-    $v = static function (string $campo, $porDefecto = '') use ($estudio, $valores) {
-        if (array_key_exists($campo, $valores)) {
-            return $valores[$campo];
-        }
-        return $estudio[$campo] ?? $porDefecto;
-    };
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 m-0"><?= $esEditar ? 'Editar estudio' : 'Nuevo estudio' ?></h1>
+    <a href="/estudios" class="btn btn-outline-secondary">Volver al listado</a>
+</div>
 
-    plantillaInicio($esEdicion ? 'Editar estudio' : 'Nuevo estudio');
+<?php if (!empty($errores)): ?>
+    <div class="alert alert-danger" role="alert">
+        <strong>No se pudo guardar:</strong>
+        <ul class="mb-0">
+            <?php foreach ($errores as $e): ?><li><?= htmlspecialchars((string) $e, ENT_QUOTES, 'UTF-8') ?></li><?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
 
-    if ($resultado !== null && !$resultado['ok']) {
-        echo '<div class="alert alert-danger">' . htmlspecialchars($resultado['mensaje']) . '</div>';
-    }
-
-    $accion = $esEdicion ? '/estudios/' . rawurlencode($id) . '/editar' : '/estudios/nuevo';
-
-    echo '<h1 class="h3 mb-3">' . ($esEdicion ? 'Editar estudio' : 'Nuevo estudio') . '</h1>';
-    echo '<form method="post" action="' . htmlspecialchars($accion) . '">';
-
-    if ($esEdicion) {
-        echo '<div class="mb-3"><label class="form-label">Identificador</label>';
-        echo '<input class="form-control" value="' . htmlspecialchars($id) . '" readonly></div>';
-    }
-
-    echo '<div class="row g-3">';
-    campoTexto('titulo', 'Título', (string) $v('titulo'));
-    campoTexto('universidad', 'Universidad', (string) $v('universidad'));
-    campoTexto('fecha', 'Fecha', (string) $v('fecha'), false, 'date');
-    campoTexto('tipo', 'Tipo', (string) $v('tipo'));
-    campoTexto('ciudad', 'Ciudad', (string) $v('ciudad'));
-    campoTexto('ins_acreditada', 'Institución acreditada (1 = sí, 0 = no)', (string) $v('ins_acreditada', '0'));
-    campoTexto('metodologia', 'Metodología', (string) $v('metodologia'));
-    campoTexto('pais', 'País', (string) $v('pais'));
-
-    echo '<div class="col-md-6">';
-    echo '<label class="form-label" for="docente">Docente</label>';
-    echo '<select class="form-select" id="docente" name="docente" required>';
-    echo '<option value="">Seleccione un docente</option>';
-    $docenteSeleccionado = (string) $v('docente');
-    foreach ($docentes as $docente) {
-        $cedula = (string) ($docente['cedula'] ?? '');
-        $nombre = trim(($docente['nombres'] ?? '') . ' ' . ($docente['apellidos'] ?? ''));
-        $sel = ($cedula === $docenteSeleccionado) ? ' selected' : '';
-        echo '<option value="' . htmlspecialchars($cedula) . '"' . $sel . '>'
-            . htmlspecialchars($cedula . ' — ' . $nombre) . '</option>';
-    }
-    echo '</select></div>';
-    echo '</div>';
-
-    echo '<div class="mt-3">';
-    if ($esEdicion) {
-        echo '<input type="hidden" name="accion" id="accion" value="completo">';
-        echo '<button type="submit" class="btn btn-primary" onclick="document.getElementById(\'accion\').value=\'completo\'">Guardar la ficha completa</button> ';
-        echo '<button type="submit" class="btn btn-outline-primary" onclick="document.getElementById(\'accion\').value=\'parcial\'">Guardar solo lo que cambié</button> ';
-    } else {
-        echo '<button type="submit" class="btn btn-primary">Guardar</button> ';
-    }
-    echo '<a href="/estudios" class="btn btn-secondary">Cancelar</a>';
-    echo '</div>';
-
-    echo '</form>';
-    plantillaFin();
-}
+<form method="post" action="<?= htmlspecialchars($accion, ENT_QUOTES, 'UTF-8') ?>" class="card bg-white">
+    <div class="card-body">
+        <?php if ($esEditar): ?>
+            <div class="mb-3">
+                <label class="form-label">ID</label>
+                <input type="text" class="form-control" value="<?= htmlspecialchars((string) ($estudio['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" readonly>
+            </div>
+        <?php endif; ?>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="titulo">Título</label>
+                <input type="text" class="form-control" id="titulo" name="titulo" value="<?= htmlspecialchars((string) ($estudio['titulo'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="universidad">Universidad</label>
+                <input type="text" class="form-control" id="universidad" name="universidad" value="<?= htmlspecialchars((string) ($estudio['universidad'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="tipo">Tipo</label>
+                <input type="text" class="form-control" id="tipo" name="tipo" value="<?= htmlspecialchars((string) ($estudio['tipo'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="cedula">Docente</label>
+                <select class="form-select" id="cedula" name="cedula" required>
+                    <option value="">Seleccione un docente...</option>
+                    <?php if (is_array($docentes)): ?>
+                        <?php foreach ($docentes as $d): ?>
+                            <option value="<?= htmlspecialchars((string) ($d['cedula'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" <?= (($estudio['cedula'] ?? '') === ($d['cedula'] ?? '')) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars((string) ($d['cedula'] ?? '') . ' - ' . ($d['nombre_completo'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-end gap-2">
+        <?php if ($esEditar): ?>
+            <button type="submit" name="verbo" value="PUT" class="btn btn-primary">Guardar ficha completa</button>
+            <button type="submit" name="verbo" value="PATCH" class="btn btn-outline-primary">Guardar solo lo que cambié</button>
+        <?php else: ?>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        <?php endif; ?>
+    </div>
+</form>
