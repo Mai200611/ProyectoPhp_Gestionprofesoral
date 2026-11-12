@@ -1,18 +1,12 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ServicioDocente.php';
-require_once __DIR__ . '/ServicioEstudiosRealizados.php';
-require_once __DIR__ . '/ServicioDocenteDepartamento.php';
-require_once __DIR__ . '/ServicioInteresesFuturos.php';
-require_once __DIR__ . '/ServicioEvaluacionDocente.php';
-require_once __DIR__ . '/ServicioReconocimiento.php';
-require_once __DIR__ . '/ServicioExperiencia.php';
-require_once __DIR__ . '/ServicioRedDocente.php';
-require_once __DIR__ . '/ServicioEstudioAc.php';
-require_once __DIR__ . '/ServicioApoyoProfesoral.php';
-require_once __DIR__ . '/ServicioBeca.php';
-
+// Incluir todos los repositorios MariaDB
+require_once __DIR__ . '/../repositorios/RepositorioAreaConocimientoMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioTerminoClaveMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioLineaInvestigacionMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioProgramaMariaDB.php';
+require_once __DIR__ . '/../repositorios/RepositorioRedMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioDocenteMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioEstudiosRealizadosMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioDocenteDepartamentoMariaDB.php';
@@ -25,80 +19,72 @@ require_once __DIR__ . '/../repositorios/RepositorioEstudioAcMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioApoyoProfesoralMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioBecaMariaDB.php';
 
-/**
- * ensamblador.php
- *
- * El ÚNICO lugar del proyecto donde se juntan las clases concretas
- * (servicios + repositorios MariaDB) con las interfaces. Cada controlador
- * pide aquí su servicio y no sabe qué implementación recibió.
- *
- * Se usan FUNCIONES EXPLÍCITAS, una por recurso, y no un switch ni nombres
- * de clase armados con texto como "Repositorio{$recurso}MariaDB". Las razones
- * están en 3_plan §4.7:
- *   - con funciones explícitas, PHP verifica tipos y el error sale al
- *     llamarlas;
- *   - con nombres armados en texto, el error sale en producción, cuando
- *     alguien pida el recurso que nadie probó;
- *   - y quien lea este archivo ve el inventario completo sin ejecutar nada.
- *
- * Cuando la v3 traiga el segundo motor, ESTE archivo —y solo éste— se
- * convierte en una fábrica de verdad.
- *
- * Cada función recibe la PDO ya construida (obtenerConexion()), para que
- * el controlador no tenga que saber cómo se arma la conexión.
- */
+// Incluir todos los servicios
+require_once __DIR__ . '/ServicioAreaConocimiento.php';
+require_once __DIR__ . '/ServicioTerminoClave.php';
+require_once __DIR__ . '/ServicioLineaInvestigacion.php';
+require_once __DIR__ . '/ServicioPrograma.php';
+require_once __DIR__ . '/ServicioRed.php';
+require_once __DIR__ . '/ServicioDocente.php';
+require_once __DIR__ . '/ServicioEstudiosRealizados.php';
+require_once __DIR__ . '/ServicioDocenteDepartamento.php';
+require_once __DIR__ . '/ServicioInteresesFuturos.php';
+require_once __DIR__ . '/ServicioEvaluacionDocente.php';
+require_once __DIR__ . '/ServicioReconocimiento.php';
+require_once __DIR__ . '/ServicioExperiencia.php';
+require_once __DIR__ . '/ServicioRedDocente.php';
+require_once __DIR__ . '/ServicioEstudioAc.php';
+require_once __DIR__ . '/ServicioApoyoProfesoral.php';
+require_once __DIR__ . '/ServicioBeca.php';
 
-function crearServicioDocente(PDO $conexion): IServicioDocente
-{
-    return new ServicioDocente(new RepositorioDocenteMariaDB($conexion));
+// V1
+function crearServicioAreaConocimiento(): ServicioAreaConocimiento {
+    return new ServicioAreaConocimiento(new RepositorioAreaConocimientoMariaDB());
+}
+function crearServicioTerminoClave(): ServicioTerminoClave {
+    return new ServicioTerminoClave(new RepositorioTerminoClaveMariaDB());
+}
+function crearServicioLineaInvestigacion(): ServicioLineaInvestigacion {
+    return new ServicioLineaInvestigacion(new RepositorioLineaInvestigacionMariaDB());
+}
+function crearServicioPrograma(): ServicioPrograma {
+    return new ServicioPrograma(new RepositorioProgramaMariaDB());
+}
+function crearServicioRed(): ServicioRed {
+    return new ServicioRed(new RepositorioRedMariaDB());
 }
 
-function crearServicioEstudiosRealizados(PDO $conexion): IServicioEstudiosRealizados
-{
-    return new ServicioEstudiosRealizados(new RepositorioEstudiosRealizadosMariaDB($conexion));
+// V2
+function crearServicioDocente(): ServicioDocente {
+    return new ServicioDocente(new RepositorioDocenteMariaDB());
 }
-
-function crearServicioDocenteDepartamento(PDO $conexion): IServicioDocenteDepartamento
-{
-    return new ServicioDocenteDepartamento(new RepositorioDocenteDepartamentoMariaDB($conexion));
+function crearServicioEstudiosRealizados(): ServicioEstudiosRealizados {
+    return new ServicioEstudiosRealizados(new RepositorioEstudiosRealizadosMariaDB());
 }
-
-function crearServicioInteresesFuturos(PDO $conexion): IServicioInteresesFuturos
-{
-    return new ServicioInteresesFuturos(new RepositorioInteresesFuturosMariaDB($conexion));
+function crearServicioDocenteDepartamento(): ServicioDocenteDepartamento {
+    return new ServicioDocenteDepartamento(new RepositorioDocenteDepartamentoMariaDB());
 }
-
-function crearServicioEvaluacionDocente(PDO $conexion): IServicioEvaluacionDocente
-{
-    return new ServicioEvaluacionDocente(new RepositorioEvaluacionDocenteMariaDB($conexion));
+function crearServicioInteresesFuturos(): ServicioInteresesFuturos {
+    return new ServicioInteresesFuturos(new RepositorioInteresesFuturosMariaDB());
 }
-
-function crearServicioReconocimiento(PDO $conexion): IServicioReconocimiento
-{
-    return new ServicioReconocimiento(new RepositorioReconocimientoMariaDB($conexion));
+function crearServicioEvaluacionDocente(): ServicioEvaluacionDocente {
+    return new ServicioEvaluacionDocente(new RepositorioEvaluacionDocenteMariaDB());
 }
-
-function crearServicioExperiencia(PDO $conexion): IServicioExperiencia
-{
-    return new ServicioExperiencia(new RepositorioExperienciaMariaDB($conexion));
+function crearServicioReconocimiento(): ServicioReconocimiento {
+    return new ServicioReconocimiento(new RepositorioReconocimientoMariaDB());
 }
-
-function crearServicioRedDocente(PDO $conexion): IServicioRedDocente
-{
-    return new ServicioRedDocente(new RepositorioRedDocenteMariaDB($conexion));
+function crearServicioExperiencia(): ServicioExperiencia {
+    return new ServicioExperiencia(new RepositorioExperienciaMariaDB());
 }
-
-function crearServicioEstudioAc(PDO $conexion): IServicioEstudioAc
-{
-    return new ServicioEstudioAc(new RepositorioEstudioAcMariaDB($conexion));
+function crearServicioRedDocente(): ServicioRedDocente {
+    return new ServicioRedDocente(new RepositorioRedDocenteMariaDB());
 }
-
-function crearServicioApoyoProfesoral(PDO $conexion): IServicioApoyoProfesoral
-{
-    return new ServicioApoyoProfesoral(new RepositorioApoyoProfesoralMariaDB($conexion));
+function crearServicioEstudioAc(): ServicioEstudioAc {
+    return new ServicioEstudioAc(new RepositorioEstudioAcMariaDB());
 }
-
-function crearServicioBeca(PDO $conexion): IServicioBeca
-{
-    return new ServicioBeca(new RepositorioBecaMariaDB($conexion));
+function crearServicioApoyoProfesoral(): ServicioApoyoProfesoral {
+    return new ServicioApoyoProfesoral(new RepositorioApoyoProfesoralMariaDB());
+}
+function crearServicioBeca(): ServicioBeca {
+    return new ServicioBeca(new RepositorioBecaMariaDB());
 }
