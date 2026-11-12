@@ -1,65 +1,35 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1); ?>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 m-0">Apoyos Profesorales</h1>
+    <a class="btn btn-primary" href="/apoyos/nuevo">Agregar apoyo</a>
+</div>
 
-/**
- * apoyos_lista.php
- *
- * Listado de apoyos professorales (hija de estudios_realizados;
- * PK = `estudios` sola).
- */
-
-/**
- * @param array{ok:bool, datos:array, mensaje:string, errores:array, id:?int}|null $resultado
- */
-function vistaListaApoyos(?array $resultado, string $avisoExito = ''): void
-{
-    $datos = $resultado['datos'] ?? [];
-    $avisoError = '';
-    if ($resultado !== null && !$resultado['ok']) {
-        $avisoError = $resultado['mensaje'];
-    }
-
-    plantillaInicio('Apoyos professorales');
-
-    if ($avisoExito !== '') {
-        echo '<div class="alert alert-success">' . htmlspecialchars($avisoExito) . '</div>';
-    }
-    if ($avisoError !== '') {
-        echo '<div class="alert alert-danger">' . htmlspecialchars($avisoError) . '</div>';
-    }
-
-    echo '<div class="d-flex justify-content-between align-items-center mb-3">';
-    echo '<h1 class="h3 m-0">Apoyos professorales</h1>';
-    echo '<a class="btn btn-primary" href="/apoyos/nuevo">Agregar apoyo</a>';
-    echo '</div>';
-
-    if ($datos === []) {
-        echo '<div class="alert alert-info">Todavía no hay apoyos. ';
-        echo '<a href="/apoyos/nuevo">Cree el primero</a>.</div>';
-        plantillaFin();
-        return;
-    }
-
-    echo '<table class="table table-striped align-middle">';
-    echo '<thead><tr>';
-    echo '<th>Estudio</th><th>Con apoyo</th><th>Institución</th><th>Tipo</th><th class="text-end">Acciones</th>';
-    echo '</tr></thead><tbody>';
-
-    foreach ($datos as $fila) {
-        $estudios = (string) ($fila['estudios'] ?? '');
-        echo '<tr>';
-        echo '<td>' . htmlspecialchars($estudios) . '</td>';
-        echo '<td>' . htmlspecialchars((string) ($fila['con_apoyo'] ?? '')) . '</td>';
-        echo '<td>' . htmlspecialchars((string) ($fila['institucion'] ?? '')) . '</td>';
-        echo '<td>' . htmlspecialchars((string) ($fila['tipo'] ?? '')) . '</td>';
-        echo '<td class="text-end">';
-        echo '<form method="post" action="/apoyos/' . rawurlencode($estudios) . '/eliminar" class="d-inline" '
-            . 'onsubmit="return confirm(\'¿Eliminar este apoyo?\');">';
-        echo '<button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>';
-        echo '</form>';
-        echo '</td></tr>';
-    }
-
-    echo '</tbody></table>';
-    plantillaFin();
-}
+<?php if (!$ok): ?>
+    <div class="alert alert-danger"><?php foreach ($errores as $e): ?><div><?= htmlspecialchars((string) $e) ?></div><?php endforeach; ?></div>
+<?php elseif (empty($datos)): ?>
+    <div class="alert alert-info">Todavía no hay apoyos. <a href="/apoyos/nuevo">Cree el primero</a>.</div>
+<?php else: ?>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle bg-white">
+            <thead class="table-light">
+                <tr><th>Estudio</th><th>Con apoyo</th><th>Institución</th><th>Tipo</th><th class="text-end">Acciones</th></tr>
+            </thead>
+            <tbody>
+                <?php foreach ($datos as $fila): ?>
+                    <?php $estudios = (string)($fila['estudios'] ?? ''); ?>
+                    <tr>
+                        <td><?= htmlspecialchars($estudios) ?></td>
+                        <td><?= htmlspecialchars((string)($fila['con_apoyo'] ?? '')) ?></td>
+                        <td><?= htmlspecialchars((string)($fila['institucion'] ?? '')) ?></td>
+                        <td><?= htmlspecialchars((string)($fila['tipo'] ?? '')) ?></td>
+                        <td class="text-end">
+                            <form method="post" action="/apoyos/<?= rawurlencode($estudios) ?>/eliminar" class="d-inline" onsubmit="return confirm('¿Eliminar este apoyo?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
