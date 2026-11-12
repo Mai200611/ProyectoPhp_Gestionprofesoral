@@ -46,7 +46,7 @@ class RepositorioDocenteMariaDB implements IRepositorioDocente
         $sql = 'SELECT cedula, nombres, apellidos, genero, cargo,
                        fecha_nacimiento, correo, telefono, url_cvlac,
                        fecha_actualizacion, escalafon, perfil, cat_minciencia,
-                       nacionalidad, activo, linea_investigacion_principal
+                       activo, linea_investigacion_principal
                 FROM docente
                 LIMIT :limite';
         $sentencia = $this->conexion->prepare($sql);
@@ -64,7 +64,7 @@ class RepositorioDocenteMariaDB implements IRepositorioDocente
         $sql = 'SELECT cedula, nombres, apellidos, genero, cargo,
                        fecha_nacimiento, correo, telefono, url_cvlac,
                        fecha_actualizacion, escalafon, perfil, cat_minciencia,
-                       nacionalidad, activo, linea_investigacion_principal
+                       activo, linea_investigacion_principal
                 FROM docente
                 WHERE cedula = :cedula';
         $sentencia = $this->conexion->prepare($sql);
