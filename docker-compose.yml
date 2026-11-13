@@ -1,118 +1,169 @@
-# docker-compose.yml
-# ---------------------------------------------------------------------------
-# ¿Qué es este archivo?
-#   Es el "director de orquesta" del proyecto. Con UN SOLO comando
-#   (`docker compose up -d --build`) levanta todo el sistema de la v1:
-#   la base de datos, la API y el front.
+# docker-compose.yml — Versión 3: el mismo sistema contra dos motores.
 #
-# ¿Por qué `name: mi_v1_programa`?
-#   Para que Docker trate este proyecto como algo DISTINTO al del curso:
-#   contenedores, redes y volúmenes separados, aunque las carpetas se
-#   llamen parecido. Los dos conviven sin pisarse.
+# Levanta CUATRO servicios con un solo comando:
+#   docker compose up -d --build
 #
-# ¿Por qué los puertos del host van con +100?
-#   El compose original publica 8020/8022/13326. Como aquí los dos
-#   proyectos estarán encendidos a la vez, movemos los del host a
-#   8120/8122/13426. ADENTRO de los contenedores todo queda igual:
-#   MariaDB sigue en 3306, la API en 8113, el front en 8020.
-# ---------------------------------------------------------------------------
+#   - mariadb:     la base de siempre, ahora con apellido (bdgestion_mariadb_local)
+#   - postgres:    la MISMA base, en dialecto de PostgreSQL (bdgestion_postgres_local)
+#   - api-gestion: UNA sola imagen con los DOS drivers de PDO (pdo_mysql y pdo_pgsql).
+#                  Lee DB_MOTOR al arrancar y escoge el repositorio en el ensamblador.
+#   - front-php:   el front de siempre; no conoce la base, solo habla HTTP con la API.
+#
+# Puertos hacia el HOST (el proyecto del curso usa los de la constitución;
+# éste publica +100 para no chocar cuando corren los dos a la vez):
+#   front       8120  -> 8020
+#   API         8122  -> 8022
+#   phpMyAdmin  8202  -> 80
+#   MariaDB    13452  -> 3306
+#   PostgreSQL 15564  -> 5432
+#
+# Cambiar de motor NO es un compose distinto: es una variable y un reinicio
+# de la API. Ejemplo (PowerShell):
+#   $env:DB_MOTOR = "postgres"
+#   docker compose up -d --no-deps --force-recreate api-gestion
+#
+# Para volver al punto de partida (borra los DOS volúmenes y re-ejecuta
+# los dos init.sql sobre bases vacías):
+#   docker compose down -v && docker compose up -d --build
 
-name: mi_v1_programa
+name: mi_v3_motores
 
 services:
 
-  # -------------------------------------------------------------------------
-  # SERVICIO: mariadb
-  # La base de datos. El script db/init.sql se monta tal cual.
-  # -------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # MariaDB 11 — la base de la v2, ahora en db/mariadb/init.sql
+  # ---------------------------------------------------------------------------
   mariadb:
     image: mariadb:11
-    container_name: mi_v1_programa_mariadb
-
+    container_name: mi_v3_mariadb
+    restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: paradigmas123
       MARIADB_DATABASE: bdgestion_mariadb_local
       MARIADB_USER: paradigmas
       MARIADB_PASSWORD: paradigmas123
-
     ports:
-      - "13426:3306"
-
+      - "13452:3306"
     volumes:
       - mariadbdata:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-
+      # El init.sql solo se ejecuta si el volumen está vacío.
+      # Para forzarlo: docker compose down -v
+      - ./db/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 20
+      start_period: 10s
 
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 — el motor NUEVO de esta versión.
+  # Misma base, mismo modelo, mismos datos de ejemplo, en dialecto PostgreSQL.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: mi_v3_postgres
     restart: unless-stopped
+    environment:
+      POSTGRES_DB: bdgestion_postgres_local
+      POSTGRES_USER: paradigmas
+      POSTGRES_PASSWORD: paradigmas123
+    ports:
+      - "15564:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Igual que con MariaDB: solo se ejecuta sobre volumen vacío.
+      - ./db/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paradigmas -d bdgestion_postgres_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
-  # -------------------------------------------------------------------------
-  # SERVICIO: api-gestion
-  # La API en PHP 8.3 puro. Habla con MariaDB a través de PDO.
-  # -------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # API — UNA sola imagen con los DOS drivers.
+  # El punto de la versión es que es el MISMO programa; dos imágenes lo
+  # esconderían. El motor se escoge con DB_MOTOR al arrancar (no por petición).
+  #
+  # Los DOS juegos de credenciales viajan siempre; el ensamblador usa el
+  # que corresponde a motorActivo().
+  # ---------------------------------------------------------------------------
   api-gestion:
     build:
       context: ./api_gestion
       dockerfile: Dockerfile
-
-    container_name: mi_v1_programa_api
-
-    volumes:
-      - ./api_gestion:/app
-
-    # Host 8122 → contenedor 8113.
-    ports:
-      - "8122:8113"
-
+    container_name: mi_v3_api_gestion
+    restart: unless-stopped
     environment:
-      DB_DSN: "mysql:host=mariadb;port=3306;dbname=bdgestion_mariadb_local"
-      DB_USUARIO: "paradigmas"
-      DB_CLAVE: "paradigmas123"
-
+      # DB_MOTOR: si no viene del host, "mariadb" (RF1, C2).
+      DB_MOTOR: ${DB_MOTOR:-mariadb}
+      # MariaDB — host interno "mariadb"
+      MARIADB_DSN: "mysql:host=mariadb;port=3306;dbname=bdgestion_mariadb_local;charset=utf8mb4"
+      MARIADB_USUARIO: paradigmas
+      MARIADB_CLAVE: paradigmas123
+      # PostgreSQL — host interno "postgres"
+      POSTGRES_DSN: "pgsql:host=postgres;port=5432;dbname=bdgestion_postgres_local"
+      POSTGRES_USUARIO: paradigmas
+      POSTGRES_CLAVE: paradigmas123
+    ports:
+      - "8122:8022"
+    volumes:
+      # Recarga natural: cada petición HTTP reinterpreta los .php.
+      - ./api_gestion:/var/www/api_gestion
+      - ./pruebas:/var/www/pruebas
     depends_on:
       mariadb:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
-    restart: unless-stopped
-
-  # -------------------------------------------------------------------------
-  # SERVICIO: front-php
-  # El front en PHP 8.3 puro. NO tiene acceso a MariaDB: solo habla HTTP
-  # con la API. La ausencia de pdo_mysql y de las credenciales DB_* es
-  # deliberada y es lo que hace cumplir el Artículo 3.
-  # -------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Front — NO recibe credenciales de base ni depende de ellas.
+  # Lo hace cumplir el compose, no solo lo pide la constitución (Art. 3).
+  # La única novedad de la v3 es la etiqueta del motor en el pie: la lee de
+  # GET / de la API (campo "motor") y NO hace nada más con ese dato (RF7, C4).
+  # ---------------------------------------------------------------------------
   front-php:
     build:
       context: ./front_php
       dockerfile: Dockerfile
-
-    container_name: mi_v1_programa_front
-
-    volumes:
-      - ./front_php:/app
-
-    # Host 8120 → contenedor 8020.
+    container_name: mi_v3_front_php
+    restart: unless-stopped
+    environment:
+      URL_API: "http://api-gestion:8022"
     ports:
       - "8120:8020"
-
-    environment:
-      # La URL interna del compose: nombre del servicio + puerto del
-      # contenedor. NUNCA localhost: dentro del contenedor del front,
-      # localhost es él mismo.
-      URL_API: "http://api-gestion:8113"
-
+    volumes:
+      - ./front_php:/var/www/front_php
     depends_on:
       - api-gestion
+    # OJO: no hay variables de conexión a la base aquí a propósito.
 
+  # ---------------------------------------------------------------------------
+  # phpMyAdmin — para mirar MariaDB desde el navegador (no aplica a PostgreSQL).
+  # Se publica con +100 sobre la constitución: 8102 -> 80 (aquí 8202:80,
+  # siguiendo el esquema del proyecto del curso +100).
+  # ---------------------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: mi_v3_phpmyadmin
     restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: paradigmas
+      PMA_PASSWORD: paradigmas123
+    ports:
+      - "8202:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
 
-# ---------------------------------------------------------------------------
-# VOLÚMENES NOMBRADOS
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Volúmenes — uno por motor. `docker compose down -v` borra los DOS y las
+# dos bases vuelven a su estado original (Art. 6).
+# -----------------------------------------------------------------------------
 volumes:
   mariadbdata:
+  pgdata:
