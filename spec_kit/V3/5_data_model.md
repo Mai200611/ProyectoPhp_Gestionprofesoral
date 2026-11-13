@@ -312,7 +312,7 @@ dos veces en el mismo formulario. Esa regla no está en ninguna línea de PHP.
 | `fecha_creacion` | DATE | DEFAULT CURRENT_TIMESTAMP | Fecha de creación del usuario |
 | `fecha_actualizacion` | DATE | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Fecha de actualización del usuario |
 
-### 3.19 `rol_usuario`
+### 3.19 `rol_usuario` — depende de rol y usuario
 
 | Columna | Tipo | Restricción | Descripción |
 |---|---|---|---|
