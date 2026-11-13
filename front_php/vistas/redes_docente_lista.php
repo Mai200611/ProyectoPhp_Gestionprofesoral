@@ -1,0 +1,34 @@
+<?php declare(strict_types=1); ?>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 m-0">Redes de Docentes</h1>
+    <a class="btn btn-primary" href="/redes-docente/nuevo">Agregar vínculo</a>
+</div>
+
+<?php if (!$ok): ?>
+    <div class="alert alert-danger"><?php foreach ($errores as $e): ?><div><?= htmlspecialchars((string) $e) ?></div><?php endforeach; ?></div>
+<?php elseif (empty($datos)): ?>
+    <div class="alert alert-info">Todavía no hay vínculos. <a href="/redes-docente/nuevo">Cree el primero</a>.</div>
+<?php else: ?>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle bg-white">
+            <thead class="table-light">
+                <tr><th>Red</th><th>Docente</th><th>Fecha de inicio</th><th class="text-end">Acciones</th></tr>
+            </thead>
+            <tbody>
+                <?php foreach ($datos as $fila): ?>
+                    <?php $red = (string)($fila['red'] ?? ''); $docente = (string)($fila['docente'] ?? ''); ?>
+                    <tr>
+                        <td><?= htmlspecialchars($red) ?></td>
+                        <td><?= htmlspecialchars($docente) ?></td>
+                        <td><?= htmlspecialchars((string)($fila['fecha_inicio'] ?? '')) ?></td>
+                        <td class="text-end">
+                            <form method="post" action="/redes-docente/<?= rawurlencode($red) ?>/<?= rawurlencode($docente) ?>/eliminar" class="d-inline" onsubmit="return confirm('¿Eliminar este vínculo?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>

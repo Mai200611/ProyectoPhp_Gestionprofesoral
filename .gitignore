@@ -1,0 +1,50 @@
+# .gitignore
+# ---------------------------------------------------------------------------
+# ¿Qué es este archivo?
+#   Le dice a git qué archivos NO debe versionar. Son archivos que no
+#   pertenecen al código del proyecto: los genera Docker, tu IDE o el
+#   propio PHP mientras trabajas.
+#
+# ¿Por qué importa?
+#   Versionar archivos basura llena el repositorio de ruido y, peor,
+#   mete credenciales o configuraciones locales que no sirven a nadie
+#   más que a tu máquina.
+# ---------------------------------------------------------------------------
+
+# --- Archivos de sesión y volcados de MariaDB ---
+# MariaDB, cuando se apaga limpiamente, puede dejar sus archivos de
+# sesión. No son código y no deben subirse.
+*.session.sql
+*.dump
+*.sql.bak
+
+# --- Configuración de IDEs ---
+# Cada editor guarda su configuración en su propia carpeta. Que git no
+# las vea: son tuyas, no del proyecto.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+nbproject/
+
+# --- Basura del sistema operativo ---
+# En Windows, Thumbs.db; en macOS, .DS_Store. Nada de esto pertenece
+# al repositorio.
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# --- Logs y archivos temporales ---
+# Los logs locales y los archivos temporales que PHP o el servidor
+# embebido puedan dejar.
+*.log
+*.tmp
+*.swp
+*~
+
+# --- Dependencias (por si alguien las agrega por error) ---
+# El Artículo 2 de la constitución prohíbe Composer y vendor/, así que
+# si aparecen en algún momento, no deben entrar al repositorio.
+/vendor/
+composer.lock
+node_modules/
