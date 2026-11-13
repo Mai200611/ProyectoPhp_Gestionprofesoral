@@ -12,6 +12,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends libpq-dev \
  && docker-php-ext-install pdo_mysql pdo_pgsql \
  && apt-get purge -y --auto-remove libpq-dev \
+ && apt-get install -y --no-install-recommends libpq5 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
