@@ -22,8 +22,13 @@ import sys
 import urllib.request
 import urllib.error
 
-URL_FRONT = "http://localhost:8120"
-URL_API = "http://localhost:8122"
+# pruebas_humo/humo_front.py — Versión 3
+#
+# Los puertos del proyecto (host): front 8184, API 8186.
+# El guion de humo NO sabe de motores (eso es lo que demuestra la versión).
+
+FRONT = "http://localhost:8184"
+API   = "http://localhost:8186"
 
 RUTAS_GET = [
     "/",
