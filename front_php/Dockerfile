@@ -1,31 +1,42 @@
-# front_php/Dockerfile
-# ---------------------------------------------------------------------------
-# ¿Qué es este archivo?
-#   Es la receta para construir la IMAGEN Docker del servicio del front.
+# front_php/Dockerfile — Versión 3.
 #
-# ¿Por qué NO se instala pdo_mysql aquí?
-#   A PROPÓSITO. El Artículo 3 de la constitución y el RNF6 exigen que el
-#   front NO pueda llegar a la base de datos: es la única prueba de que
-#   son dos procesos separados. Si mañana alguien intentara meter un
-#   `new PDO` en el front, ni siquiera compilaría el driver. La ausencia
-#   es la comprobación.
+# El front es la mitad del trabajo de la versión (Art. 1.1), pero en la v3
+# casi no cambia: lo único que se le agregó es la etiqueta del motor en el
+# pie, que lee del GET / de la API (RF7, C4).
 #
-# ¿Qué hace este contenedor?
-#   Servir el front con el servidor embebido de PHP en el puerto 8020
-#   (adentro del contenedor). El host lo mapea al 8120 desde el
-#   docker-compose.
-# ---------------------------------------------------------------------------
+# Por eso este Dockerfile es casi idéntico al de la v2:
+#   - sigue SIN drivers de base de datos (el front no abre conexiones, Art. 3);
+#   - sigue SIN credenciales de base (las pone el compose, y el compose no
+#     las pasa a este servicio a propósito);
+#   - lo único que cambia es el EXPOSE y el CMD, para alinearse con los
+#     puertos de ESTA versión.
+#
+# Puertos:
+#   - EXPOSE 8020: el puerto donde escucha el servidor embebido de PHP
+#     ADENTRO del contenedor. El compose lo publica al host como 8120.
+#   - Adentro todo es igual que en la constitución; el +100 es del host.
 
 FROM php:8.3-cli
 
-# La extensión cURL la usa el cliente_api.php para hablar con la API. Viene
-# activada por defecto en la imagen oficial de PHP, así que no hace falta
-# instalar nada más. (La ausencia de pdo_mysql es deliberada.)
+# --- Directorio de trabajo ---------------------------------------------------
+WORKDIR /var/www/front_php
 
-WORKDIR /app
+# --- Copiamos el código ------------------------------------------------------
+# En desarrollo el compose MONTA ./front_php encima de este directorio, así
+# que este COPY es solo para que la imagen sea autocontenida si alguien la
+# corre sin el compose. La recarga natural (Art. 7) sigue funcionando gracias
+# al bind mount.
+COPY . /var/www/front_php
 
-COPY . /app
-
+# --- Puerto que escucha el servidor embebido DENTRO del contenedor -----------
+# El compose lo publica al host como 8120. Adentro es 8020.
 EXPOSE 8020
 
-CMD ["php", "-S", "0.0.0.0:8020", "index.php"]
+# --- Comando de arranque -----------------------------------------------------
+# El front controller es index.php (Art. 2: una sola entrada). El servidor
+# embebido escucha en 0.0.0.0:8020 para ser alcanzable desde el navegador
+# del host a través del puerto publicado.
+#
+# SIN variables de base de datos: el front solo conoce URL_API (que le pasa
+# el compose) y habla HTTP con la API. Nada más.
+CMD ["php", "-S", "0.0.0.0:8020", "-t", "/var/www/front_php", "/var/www/front_php/index.php"]
