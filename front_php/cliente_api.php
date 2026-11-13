@@ -8,13 +8,15 @@ declare(strict_types=1);
  * ---------------------------------------------------------------------------
  */
 
-function url_api(): string
+// front_php/cliente_api.php — Versión 3
+//
+// Esta es la ÚNICA línea que cambia respecto de la v2 en este archivo:
+// el puerto interno de la API. Sigue sin conocer el motor ni la base
+// (RF7: el front no toma ninguna decisión con ese dato).
+
+function urlApi(): string
 {
-    $url = getenv('URL_API');
-    if ($url === false || $url === '') {
-        return 'http://localhost:8122'; // Puerto local por defecto
-    }
-    return $url;
+    return rtrim((string) (getenv('URL_API') ?: 'http://api-gestion:8086'), '/');
 }
 
 function llamar_api(string $metodo, string $ruta, ?array $cuerpo = null): ?array
