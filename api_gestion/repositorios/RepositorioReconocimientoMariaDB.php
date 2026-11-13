@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioReconocimiento.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -74,7 +74,7 @@ class RepositorioReconocimientoMariaDB implements IRepositorioReconocimiento
             }
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el reconocimiento');
+            traducirErrorMariaDB($e, 'el reconocimiento');
         }
 
         return (int) $this->conexion->lastInsertId();
@@ -99,7 +99,7 @@ class RepositorioReconocimientoMariaDB implements IRepositorioReconocimiento
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el reconocimiento');
+            traducirErrorMariaDB($e, 'el reconocimiento');
         }
 
         return $sentencia->rowCount();
@@ -127,7 +127,7 @@ class RepositorioReconocimientoMariaDB implements IRepositorioReconocimiento
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el reconocimiento');
+            traducirErrorMariaDB($e, 'el reconocimiento');
         }
 
         return $sentencia->rowCount();
@@ -142,7 +142,7 @@ class RepositorioReconocimientoMariaDB implements IRepositorioReconocimiento
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el reconocimiento');
+            traducirErrorMariaDB($e, 'el reconocimiento');
         }
 
         return $sentencia->rowCount();

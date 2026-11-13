@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioInteresesFuturos.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -78,7 +78,7 @@ class RepositorioInteresesFuturosMariaDB implements IRepositorioInteresesFuturos
             }
             return $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el interés futuro');
+            traducirErrorMariaDB($e, 'el interés futuro');
         }
     }
 
@@ -101,7 +101,7 @@ class RepositorioInteresesFuturosMariaDB implements IRepositorioInteresesFuturos
             $sentencia->bindValue(':termino_clave', $terminoClave);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el interés futuro');
+            traducirErrorMariaDB($e, 'el interés futuro');
         }
 
         return $sentencia->rowCount();
@@ -129,7 +129,7 @@ class RepositorioInteresesFuturosMariaDB implements IRepositorioInteresesFuturos
             $sentencia->bindValue(':termino_clave', $terminoClave);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el interés futuro');
+            traducirErrorMariaDB($e, 'el interés futuro');
         }
 
         return $sentencia->rowCount();
@@ -146,7 +146,7 @@ class RepositorioInteresesFuturosMariaDB implements IRepositorioInteresesFuturos
             $sentencia->bindValue(':termino_clave', $terminoClave);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el interés futuro');
+            traducirErrorMariaDB($e, 'el interés futuro');
         }
 
         return $sentencia->rowCount();

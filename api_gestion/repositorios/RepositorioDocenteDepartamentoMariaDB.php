@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioDocenteDepartamento.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -21,7 +21,7 @@ require_once __DIR__ . '/../utilidades/filtrar_columnas.php';
  *   - `obtenerPorClave()`, `reemplazar()`, `actualizarParcial()` y
  *     `eliminar()` reciben las dos llaves por separado.
  *   - Los errores de integridad (pareja duplicada, FK inexistente) se
- *     traducen con traducirErrorDeIntegridad() a 409.
+ *     traducen con traducirErrorMariaDB() a 409.
  *
  * Ojo con los nombres de columna reales: `docente` (string) y `departamento`
  * (int → programa.id). 6_contracts §8 usa etiquetas didácticas
@@ -88,7 +88,7 @@ class RepositorioDocenteDepartamentoMariaDB implements IRepositorioDocenteDepart
             }
             return $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la vinculación docente-departamento');
+            traducirErrorMariaDB($e, 'la vinculación docente-departamento');
         }
     }
 
@@ -113,7 +113,7 @@ class RepositorioDocenteDepartamentoMariaDB implements IRepositorioDocenteDepart
             $sentencia->bindValue(':departamento', $departamento, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la vinculación docente-departamento');
+            traducirErrorMariaDB($e, 'la vinculación docente-departamento');
         }
 
         return $sentencia->rowCount();
@@ -143,7 +143,7 @@ class RepositorioDocenteDepartamentoMariaDB implements IRepositorioDocenteDepart
             $sentencia->bindValue(':departamento', $departamento, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la vinculación docente-departamento');
+            traducirErrorMariaDB($e, 'la vinculación docente-departamento');
         }
 
         return $sentencia->rowCount();
@@ -160,7 +160,7 @@ class RepositorioDocenteDepartamentoMariaDB implements IRepositorioDocenteDepart
             $sentencia->bindValue(':departamento', $departamento, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la vinculación docente-departamento');
+            traducirErrorMariaDB($e, 'la vinculación docente-departamento');
         }
 
         return $sentencia->rowCount();
