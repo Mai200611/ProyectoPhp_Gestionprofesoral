@@ -14,7 +14,7 @@ declare(strict_types=1);
 // el puerto interno de la API. Sigue sin conocer el motor ni la base
 // (RF7: el front no toma ninguna decisión con ese dato).
 
-function urlApi(): string
+function url_api(): string
 {
     return rtrim((string) (getenv('URL_API') ?: 'http://api-gestion:8086'), '/');
 }

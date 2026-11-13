@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../repositorios/Conexion.php';
-
-// V1
+require_once __DIR__ . '/../config/conexion.php'; // V1
 require_once __DIR__ . '/../repositorios/RepositorioAreaConocimientoMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioTerminoClaveMariaDB.php';
 require_once __DIR__ . '/../repositorios/RepositorioLineaInvestigacionMariaDB.php';
