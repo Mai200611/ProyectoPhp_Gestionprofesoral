@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioBeca.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -81,7 +81,7 @@ class RepositorioBecaMariaDB implements IRepositorioBeca
             }
             return $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la beca');
+            traducirErrorMariaDB($e, 'la beca');
         }
     }
 
@@ -104,7 +104,7 @@ class RepositorioBecaMariaDB implements IRepositorioBeca
             $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la beca');
+            traducirErrorMariaDB($e, 'la beca');
         }
 
         return $sentencia->rowCount();
@@ -132,7 +132,7 @@ class RepositorioBecaMariaDB implements IRepositorioBeca
             $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la beca');
+            traducirErrorMariaDB($e, 'la beca');
         }
 
         return $sentencia->rowCount();
@@ -147,7 +147,7 @@ class RepositorioBecaMariaDB implements IRepositorioBeca
             $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la beca');
+            traducirErrorMariaDB($e, 'la beca');
         }
 
         return $sentencia->rowCount();

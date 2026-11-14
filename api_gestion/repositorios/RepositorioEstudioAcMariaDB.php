@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioEstudioAc.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -81,7 +81,7 @@ class RepositorioEstudioAcMariaDB implements IRepositorioEstudioAc
             }
             return $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo estudio-área');
+            traducirErrorMariaDB($e, 'el vínculo estudio-área');
         }
     }
 
@@ -104,7 +104,7 @@ class RepositorioEstudioAcMariaDB implements IRepositorioEstudioAc
             $sentencia->bindValue(':area_conocimiento', $areaConocimiento);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo estudio-área');
+            traducirErrorMariaDB($e, 'el vínculo estudio-área');
         }
 
         return $sentencia->rowCount();
@@ -132,7 +132,7 @@ class RepositorioEstudioAcMariaDB implements IRepositorioEstudioAc
             $sentencia->bindValue(':area_conocimiento', $areaConocimiento);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo estudio-área');
+            traducirErrorMariaDB($e, 'el vínculo estudio-área');
         }
 
         return $sentencia->rowCount();
@@ -149,7 +149,7 @@ class RepositorioEstudioAcMariaDB implements IRepositorioEstudioAc
             $sentencia->bindValue(':area_conocimiento', $areaConocimiento);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo estudio-área');
+            traducirErrorMariaDB($e, 'el vínculo estudio-área');
         }
 
         return $sentencia->rowCount();

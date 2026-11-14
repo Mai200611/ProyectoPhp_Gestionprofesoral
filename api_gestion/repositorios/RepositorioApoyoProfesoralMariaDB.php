@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioApoyoProfesoral.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -79,7 +79,7 @@ class RepositorioApoyoProfesoralMariaDB implements IRepositorioApoyoProfesoral
             }
             return $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el apoyo profesoral');
+            traducirErrorMariaDB($e, 'el apoyo profesoral');
         }
     }
 
@@ -102,7 +102,7 @@ class RepositorioApoyoProfesoralMariaDB implements IRepositorioApoyoProfesoral
             $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el apoyo profesoral');
+            traducirErrorMariaDB($e, 'el apoyo profesoral');
         }
 
         return $sentencia->rowCount();
@@ -130,7 +130,7 @@ class RepositorioApoyoProfesoralMariaDB implements IRepositorioApoyoProfesoral
             $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el apoyo profesoral');
+            traducirErrorMariaDB($e, 'el apoyo profesoral');
         }
 
         return $sentencia->rowCount();
@@ -145,7 +145,7 @@ class RepositorioApoyoProfesoralMariaDB implements IRepositorioApoyoProfesoral
             $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el apoyo profesoral');
+            traducirErrorMariaDB($e, 'el apoyo profesoral');
         }
 
         return $sentencia->rowCount();

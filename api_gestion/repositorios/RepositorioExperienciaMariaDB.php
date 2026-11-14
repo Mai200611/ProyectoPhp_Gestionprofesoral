@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioExperiencia.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -81,7 +81,7 @@ class RepositorioExperienciaMariaDB implements IRepositorioExperiencia
             }
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la experiencia');
+            traducirErrorMariaDB($e, 'la experiencia');
         }
 
         return (int) $this->conexion->lastInsertId();
@@ -107,7 +107,7 @@ class RepositorioExperienciaMariaDB implements IRepositorioExperiencia
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la experiencia');
+            traducirErrorMariaDB($e, 'la experiencia');
         }
 
         return $sentencia->rowCount();
@@ -136,7 +136,7 @@ class RepositorioExperienciaMariaDB implements IRepositorioExperiencia
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la experiencia');
+            traducirErrorMariaDB($e, 'la experiencia');
         }
 
         return $sentencia->rowCount();
@@ -151,7 +151,7 @@ class RepositorioExperienciaMariaDB implements IRepositorioExperiencia
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'la experiencia');
+            traducirErrorMariaDB($e, 'la experiencia');
         }
 
         return $sentencia->rowCount();

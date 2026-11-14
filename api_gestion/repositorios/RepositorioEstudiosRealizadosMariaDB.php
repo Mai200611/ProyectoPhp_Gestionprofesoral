@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioEstudiosRealizados.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -19,7 +19,7 @@ require_once __DIR__ . '/../utilidades/filtrar_columnas.php';
  *   - `reemplazar()` y `actualizarParcial()` cuentan filas afectadas.
  *   - `eliminar()` cuenta filas eliminadas.
  *   - TODOS los métodos envuelven sus escrituras en try/catch de PDOException
- *     y traducen el veredicto con traducirErrorDeIntegridad() (Fase 1).
+ *     y traducen el veredicto con traducirErrorMariaDB() (Fase 1).
  *
  * El SQL siempre va en prepared statements (RNF3). Los valores del body
  * pasan por filtrarColumnas() para descartar lo que esta API no acepta
@@ -89,7 +89,7 @@ class RepositorioEstudiosRealizadosMariaDB implements IRepositorioEstudiosRealiz
             }
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el estudio');
+            traducirErrorMariaDB($e, 'el estudio');
         }
 
         return (int) $this->conexion->lastInsertId();
@@ -116,7 +116,7 @@ class RepositorioEstudiosRealizadosMariaDB implements IRepositorioEstudiosRealiz
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el estudio');
+            traducirErrorMariaDB($e, 'el estudio');
         }
 
         return $sentencia->rowCount();
@@ -146,7 +146,7 @@ class RepositorioEstudiosRealizadosMariaDB implements IRepositorioEstudiosRealiz
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el estudio');
+            traducirErrorMariaDB($e, 'el estudio');
         }
 
         return $sentencia->rowCount();
@@ -161,7 +161,7 @@ class RepositorioEstudiosRealizadosMariaDB implements IRepositorioEstudiosRealiz
             $sentencia->bindValue(':id', $id, PDO::PARAM_INT);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el estudio');
+            traducirErrorMariaDB($e, 'el estudio');
         }
 
         return $sentencia->rowCount();
