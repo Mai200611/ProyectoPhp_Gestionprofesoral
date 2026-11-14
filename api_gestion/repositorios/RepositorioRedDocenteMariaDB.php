@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IRepositorioRedDocente.php';
-require_once __DIR__ . '/errores_de_integridad.php';
+require_once __DIR__ . '/errores_de_integridad_mariadb.php';
 require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
 require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
 require_once __DIR__ . '/../config/conexion.php';
@@ -80,7 +80,7 @@ class RepositorioRedDocenteMariaDB implements IRepositorioRedDocente
             }
             return $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo red-docente');
+            traducirErrorMariaDB($e, 'el vínculo red-docente');
         }
     }
 
@@ -105,7 +105,7 @@ class RepositorioRedDocenteMariaDB implements IRepositorioRedDocente
             $sentencia->bindValue(':docente', $docente);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo red-docente');
+            traducirErrorMariaDB($e, 'el vínculo red-docente');
         }
 
         return $sentencia->rowCount();
@@ -135,7 +135,7 @@ class RepositorioRedDocenteMariaDB implements IRepositorioRedDocente
             $sentencia->bindValue(':docente', $docente);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo red-docente');
+            traducirErrorMariaDB($e, 'el vínculo red-docente');
         }
 
         return $sentencia->rowCount();
@@ -152,7 +152,7 @@ class RepositorioRedDocenteMariaDB implements IRepositorioRedDocente
             $sentencia->bindValue(':docente', $docente);
             $sentencia->execute();
         } catch (PDOException $e) {
-            traducirErrorDeIntegridad($e, 'el vínculo red-docente');
+            traducirErrorMariaDB($e, 'el vínculo red-docente');
         }
 
         return $sentencia->rowCount();
