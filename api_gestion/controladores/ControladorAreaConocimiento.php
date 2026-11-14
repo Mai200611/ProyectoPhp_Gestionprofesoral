@@ -143,6 +143,11 @@ class ControladorAreaConocimiento
     // Valida el body: los 4 campos (id, gran_area, area, disciplina)
     // obligatorios y no vacíos. Si todo bien, delega en el servicio.
     // -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // crear — POST /api/area_conocimiento
+    // Valida el body: los 4 campos (id, gran_area, area, disciplina)
+    // obligatorios y no vacíos. Si todo bien, delega en el servicio.
+    // -----------------------------------------------------------------------
     public function crear(array $body): array
     {
         $errores = $this->validarCreacion($body);
@@ -175,12 +180,19 @@ class ControladorAreaConocimiento
                 'mensaje' => $e->getMessage(),
             ]);
         } catch (PDOException $e) {
-            // PK duplicada u otro error del motor: 500 con detalle
-            // (contrato §0 y clarificación C3).
+            // Validamos si el error es de llave duplicada (Código 23000)
+            if ($e->getCode() == 23000) {
+                return $this->respuesta(409, [ // 409 Conflict
+                    'estado'  => 409,
+                    'mensaje' => 'Ya existe un área de conocimiento con este ID. Por favor, intenta con otro.',
+                ]);
+            }
+
+            // Para cualquier otro error de base de datos, devolvemos 500
+            // pero SIN exponer el $e->getMessage() al cliente por seguridad.
             return $this->respuesta(500, [
                 'estado'  => 500,
-                'mensaje' => 'Error al crear el área de conocimiento.',
-                'detalle' => $e->getMessage(),
+                'mensaje' => 'Ocurrió un error interno al procesar la solicitud.',
             ]);
         }
     }

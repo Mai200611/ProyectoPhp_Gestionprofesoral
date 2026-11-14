@@ -1,0 +1,126 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/IRepositorioBeca.php';
+require_once __DIR__ . '/errores_de_integridad_postgres.php';
+require_once __DIR__ . '/../excepciones/NoEncontradoExcepcion.php';
+require_once __DIR__ . '/../excepciones/ConflictoDeIntegridadExcepcion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../utilidades/filtrar_columnas.php';
+
+class RepositorioBecaPostgres implements IRepositorioBeca
+{
+    private PDO $conexion;
+
+    public function __construct(PDO $conexion)
+    {
+        $this->conexion = $conexion;
+    }
+
+    public function obtenerTodos(int $limite): array
+    {
+        $sql = 'SELECT estudios, tipo, institucion,
+                       fecha_inicio, fecha_fin, activo
+                FROM beca
+                LIMIT :limite';
+        $sentencia = $this->conexion->prepare($sql);
+        $sentencia->bindValue(':limite', $limite, PDO::PARAM_INT);
+        $sentencia->execute();
+        $filas = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Limpiamos booleanos y fechas con microsegundos
+        return $filas === false ? [] : array_map([$this, 'limpiarFila'], $filas);
+    }
+
+    public function obtenerPorId(int $estudios): ?array
+    {
+        $sql = 'SELECT estudios, tipo, institucion,
+                       fecha_inicio, fecha_fin, activo
+                FROM beca
+                WHERE estudios = :estudios';
+        $sentencia = $this->conexion->prepare($sql);
+        $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
+        $sentencia->execute();
+        $fila = $sentencia->fetch(PDO::FETCH_ASSOC);
+        return $fila === false ? null : $this->limpiarFila($fila);
+    }
+
+    public function crear(array $datos): bool
+    {
+        $columnas = filtrarColumnas($datos, [
+            'estudios', 'tipo', 'institucion',
+            'fecha_inicio', 'fecha_fin', 'activo',
+        ]);
+
+        $nombres = array_keys($columnas);
+        $marcadores = array_map(static fn(string $c): string => ':' . $c, $nombres);
+        $sql = 'INSERT INTO beca (' . implode(', ', $nombres) . ')
+                VALUES (' . implode(', ', $marcadores) . ')';
+
+        try {
+            $sentencia = $this->conexion->prepare($sql);
+            foreach ($columnas as $columna => $valor) {
+                $sentencia->bindValue(':' . $columna, $valor);
+            }
+            return $sentencia->execute();
+        } catch (PDOException $e) {
+            traducirErrorPostgres($e, 'la beca');
+        }
+    }
+
+    public function reemplazar(int $estudios, array $datos): int
+    {
+        $columnas = filtrarColumnas($datos, [
+            'tipo', 'institucion', 'fecha_inicio', 'fecha_fin', 'activo',
+        ]);
+        $asignaciones = implode(', ', array_map(
+            static fn(string $c): string => "$c = :$c",
+            array_keys($columnas)
+        ));
+        $sql = "UPDATE beca SET $asignaciones WHERE estudios = :estudios";
+
+        try {
+            $sentencia = $this->conexion->prepare($sql);
+            foreach ($columnas as $columna => $valor) {
+                $sentencia->bindValue(':' . $columna, $valor);
+            }
+            $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
+            $sentencia->execute();
+            return $sentencia->rowCount();
+        } catch (PDOException $e) {
+            traducirErrorPostgres($e, 'la beca');
+        }
+    }
+
+    public function actualizarParcial(int $estudios, array $datos): int
+    {
+        return $this->reemplazar($estudios, $datos);
+    }
+
+    public function eliminar(int $estudios): int
+    {
+        $sql = 'DELETE FROM beca WHERE estudios = :estudios';
+
+        try {
+            $sentencia = $this->conexion->prepare($sql);
+            $sentencia->bindValue(':estudios', $estudios, PDO::PARAM_INT);
+            $sentencia->execute();
+            return $sentencia->rowCount();
+        } catch (PDOException $e) {
+            traducirErrorPostgres($e, 'la beca');
+        }
+    }
+
+    private function limpiarFila(array $fila): array
+    {
+        if (isset($fila['activo'])) {
+            $fila['activo'] = (int) (bool) $fila['activo'];
+        }
+        foreach ($fila as $k => $v) {
+            if (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+$/', $v)) {
+                $fila[$k] = substr($v, 0, 19);
+            }
+        }
+        return $fila;
+    }
+}
