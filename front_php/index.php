@@ -1,14 +1,6 @@
 <?php
 declare(strict_types=1);
 
-/**
- * ---------------------------------------------------------------------------
- * ¿Qué es este archivo?
- *   Es el FRONT CONTROLLER del front. TODAS las peticiones que llegan al
- *   front pasan por aquí.
- * ---------------------------------------------------------------------------
- */
-
 // 0. ARCHIVOS ESTÁTICOS
 $uriBruta = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = $uriBruta;
@@ -28,7 +20,6 @@ session_start();
 require_once __DIR__ . '/cliente_api.php';
 
 // 3. AYUDANTES DEL FRONT
-
 function redirigir_con(string $ruta, ?string $mensaje = null): void
 {
     if ($mensaje !== null) {
@@ -84,9 +75,58 @@ function tomar_campos_post(array $nombres): array
     return $datos;
 }
 
-// 4. ENRUTAMIENTO DEL FRONT
+// =========================================================================
+// PROTECCIÓN DE RUTAS (AUTENTICACIÓN)
+// =========================================================================
+$rutasPublicas = ['/login', '/publico/'];
+$esPublica = false;
+foreach ($rutasPublicas as $pub) {
+    if (str_starts_with($uri, $pub)) {
+        $esPublica = true;
+        break;
+    }
+}
 
-// GET / → inicio
+if (!$esPublica && !isset($_SESSION['usuario'])) {
+    header('Location: /login');
+    exit;
+}
+
+// =========================================================================
+// ENRUTAMIENTO DEL FRONT
+// =========================================================================
+
+// --- RUTAS DE LOGIN / LOGOUT ---
+if ($uri === '/login') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $user = $_POST['username'] ?? '';
+        $pass = $_POST['password'] ?? '';
+        
+        $resultado = login($user, $pass);
+        
+        if ($resultado['ok']) {
+            $_SESSION['usuario'] = $user;
+            redirigir_con(url_front('areas'), 'Bienvenido al sistema, ' . $user);
+        } else {
+            pintar('login', ['errores' => $resultado['errores']]);
+            exit;
+        }
+    }
+    // Si ya está logueado y entra a /login, lo mandamos a /areas
+    if (isset($_SESSION['usuario'])) {
+        redirigir_con(url_front('areas'));
+    }
+    pintar('login', ['errores' => []]);
+    exit;
+}
+
+if ($uri === '/logout') {
+    session_destroy();
+    header('Location: /login');
+    exit;
+}
+
+// --- INICIO ---
 if ($uri === '/' || $uri === '') {
     pintar('inicio');
     exit;

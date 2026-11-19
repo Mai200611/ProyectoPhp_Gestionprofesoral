@@ -1,19 +1,6 @@
 <?php
 declare(strict_types=1);
 
-/**
- * ---------------------------------------------------------------------------
- * ¿Qué es este archivo?
- *   Es la ÚNICA pieza del front que habla HTTP con la API.
- * ---------------------------------------------------------------------------
- */
-
-// front_php/cliente_api.php — Versión 3
-//
-// Esta es la ÚNICA línea que cambia respecto de la v2 en este archivo:
-// el puerto interno de la API. Sigue sin conocer el motor ni la base
-// (RF7: el front no toma ninguna decisión con ese dato).
-
 function url_api(): string
 {
     return rtrim((string) (getenv('URL_API') ?: 'http://api-gestion:8086'), '/');
@@ -53,14 +40,28 @@ function llamar_api(string $metodo, string $ruta, ?array $cuerpo = null): ?array
 function mensajes_de_error(?array $respuesta): array
 {
     if ($respuesta === null) return ['El servicio no está disponible.'];
+    
     if (isset($respuesta['errores']) && is_array($respuesta['errores']) && $respuesta['errores'] !== []) {
         return array_map('strval', $respuesta['errores']);
     }
-    $mensaje = $respuesta['mensaje'] ?? 'Ocurrió un error inesperado.';
-    if (isset($respuesta['detalle']) && $respuesta['detalle'] !== '') {
-        $mensaje .= ' ' . $respuesta['detalle'];
+    
+    $mensaje = (string) ($respuesta['mensaje'] ?? 'Ocurrió un error inesperado.');
+    
+    if (str_contains($mensaje, 'SQLSTATE') || str_contains($mensaje, 'Integrity constraint') || str_contains($mensaje, 'Failed opening')) {
+        return ['Ya existe un registro con ese ID o los datos enviados no son válidos. Por favor, verifica e intenta de nuevo.'];
     }
-    return [(string) $mensaje];
+    
+    return [$mensaje];
+}
+
+// =========================================================================
+// AUTENTICACIÓN (V3)
+// =========================================================================
+function login(string $username, string $password): array {
+    $r = llamar_api('POST', '/api/login', ['username' => $username, 'password' => $password]);
+    if ($r === null) return ['ok' => false, 'errores' => ['El servicio no está disponible.']];
+    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'token' => $r['token'] ?? ''];
+    return ['ok' => false, 'errores' => mensajes_de_error($r)];
 }
 
 // =========================================================================
@@ -84,7 +85,7 @@ function obtener_area_conocimiento(string $id): array {
 function crear_area_conocimiento(array $datos): array {
     $r = llamar_api('POST', '/api/area_conocimiento', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_area_conocimiento(string $id, array $datos): array {
@@ -123,7 +124,7 @@ function obtener_termino_clave(string $termino): array {
 function crear_termino_clave(array $datos): array {
     $r = llamar_api('POST', '/api/termino_clave', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_termino_clave(string $termino, array $datos): array {
@@ -162,7 +163,7 @@ function obtener_linea_investigacion(int $id): array {
 function crear_linea_investigacion(array $datos): array {
     $r = llamar_api('POST', '/api/linea_investigacion', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_linea_investigacion(int $id, array $datos): array {
@@ -201,7 +202,7 @@ function obtener_programa(int $id): array {
 function crear_programa(array $datos): array {
     $r = llamar_api('POST', '/api/programa', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_programa(int $id, array $datos): array {
@@ -240,7 +241,7 @@ function obtener_red(int $idr): array {
 function crear_red(array $datos): array {
     $r = llamar_api('POST', '/api/red', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_red(int $idr, array $datos): array {
@@ -289,7 +290,7 @@ function obtener_docente_completo(string $cedula): array {
 function crear_docente(array $datos): array {
     $r = llamar_api('POST', '/api/docente', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_docente(string $cedula, array $datos): array {
@@ -322,7 +323,7 @@ function obtener_estudio(int $id): array {
 function crear_estudio(array $datos): array {
     $r = llamar_api('POST', '/api/estudios_realizados', $datos);
     if ($r === null) return ['ok' => false, 'datos' => null, 'errores' => ['El servicio no está disponible.']];
-    if (($r['__codigo'] ?? 0) === 200) return ['ok' => true, 'datos' => $r, 'errores' => []];
+    if (($r['__codigo'] ?? 0) === 200 || ($r['__codigo'] ?? 0) === 201) return ['ok' => true, 'datos' => $r, 'errores' => []];
     return ['ok' => false, 'datos' => null, 'errores' => mensajes_de_error($r)];
 }
 function reemplazar_estudio(int $id, array $datos): array {
@@ -347,7 +348,7 @@ function eliminar_estudio(int $id): array {
 // --- DOCENTE_DEPARTAMENTO ---
 function listar_departamentos(): array {
     $r = llamar_api('GET', '/api/docente_departamento');
-    return ['ok' => true, 'datos' => $r['datos'] ?? [], 'errores' => []]; // Si falla, devuelve vacío
+    return ['ok' => true, 'datos' => $r['datos'] ?? [], 'errores' => []];
 }
 
 // --- INTERESES_FUTUROS ---

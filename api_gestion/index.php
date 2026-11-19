@@ -1,4 +1,14 @@
 <?php
+// Permitir peticiones desde cualquier origen (para desarrollo)
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+// Si es una petición OPTIONS (preflight), responder con 200 y salir
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 declare(strict_types=1);
 
 require_once __DIR__ . '/servicios/ensamblador.php';
@@ -23,6 +33,9 @@ require_once __DIR__ . '/controladores/ControladorEstudioAc.php';
 require_once __DIR__ . '/controladores/ControladorApoyoProfesoral.php';
 require_once __DIR__ . '/controladores/ControladorBeca.php';
 
+// V3 (Autenticación)
+require_once __DIR__ . '/controladores/ControladorAuth.php';
+
 $metodo = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $ruta = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $ruta = rtrim($ruta, '/');
@@ -31,14 +44,14 @@ if ($ruta === '') $ruta = '/';
 if ($metodo === 'GET' && $ruta === '/') {
     responderJson(200, [
         'mensaje' => 'API Gestión funcionando',
-        'version' => 'v2',
+        'version' => 'v3',
         'recursos' => [
             'area_conocimiento', 'termino_clave', 'linea_investigacion', 'programa', 'red',
             'docente', 'estudios_realizados', 'docente_departamento', 'intereses_futuros', 
             'evaluacion_docente', 'reconocimiento', 'experiecia', 'red_docente', 'estudio_ac',
             'apoyo_profesoral', 'beca'
         ],
-        'contratos' => 'docs/spec_kit/versiones/v2_tablas_con_fk/6_contracts.md',
+        'auth' => 'POST /api/login'
     ]);
     exit;
 }
@@ -48,6 +61,15 @@ $body = [];
 if ($cuerpoCrudo !== '') {
     $decodificado = json_decode($cuerpoCrudo, true);
     if (is_array($decodificado)) $body = $decodificado;
+}
+
+// =========================================================================
+// RUTA DE AUTENTICACIÓN
+// =========================================================================
+if ($metodo === 'POST' && $ruta === '/api/login') {
+    $c = new ControladorAuth();
+    responderRespuesta($c->login($body));
+    exit;
 }
 
 // =========================================================================
