@@ -25,7 +25,7 @@
                 
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Módulo Profesoral (v2)
+                        Módulo Profesoral 
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="/docentes">Docentes</a></li>
@@ -63,8 +63,17 @@
     <?php endif; ?>
     <?= $contenido ?>
 </main>
+<?php
+$infoDiagnostico = function_exists('diagnostico') ? diagnostico() : null;
+$versionApi = $infoDiagnostico['version'] ?? 'v3';$motorActivo = $infoDiagnostico['motor'] ?? ($infoDiagnostico['db_motor'] ?? 'mariadb');
+?>
 <footer class="text-center text-muted py-4 mt-4">
-    <small>Gestión Profesoral — v2</small>
+    <small>
+        Gestión Profesoral — <?= htmlspecialchars((string) $versionApi, ENT_QUOTES, 'UTF-8') ?>
+        <?php if ($infoDiagnostico !== null): ?>
+            | Motor: <?= htmlspecialchars((string) $motorActivo, ENT_QUOTES, 'UTF-8') ?>
+        <?php endif; ?>
+    </small>
 </footer>
 <script src="/publico/bootstrap.bundle.min.js"></script>
 </body>

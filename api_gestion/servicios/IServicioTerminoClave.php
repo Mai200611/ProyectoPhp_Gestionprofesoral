@@ -37,7 +37,7 @@ interface IServicioTerminoClave
      * Devuelve todos los términos, hasta el límite indicado.
      * @return TerminoClave[]
      */
-    public function obtenerTodos(int $limite): array;
+    public function obtenerTodos(int $limite = 100): array;
 
     /**
      * Devuelve un término por su clave primaria (`termino`).

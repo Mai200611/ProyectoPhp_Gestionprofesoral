@@ -36,7 +36,7 @@ interface IServicioLineaInvestigacion
      * Devuelve todas las líneas, hasta el límite indicado.
      * @return LineaInvestigacion[]
      */
-    public function obtenerTodos(int $limite): array;
+    public function obtenerTodos(int $limite = 100): array;
 
     /**
      * Devuelve una línea por su id.

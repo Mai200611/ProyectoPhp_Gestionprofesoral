@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 // Permitir peticiones desde cualquier origen (para desarrollo)
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
@@ -9,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-declare(strict_types=1);
 
 require_once __DIR__ . '/servicios/ensamblador.php';
 

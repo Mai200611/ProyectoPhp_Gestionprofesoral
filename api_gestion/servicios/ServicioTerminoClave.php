@@ -43,8 +43,10 @@ class ServicioTerminoClave implements IServicioTerminoClave
     // -----------------------------------------------------------------------
     // obtenerTodos
     // -----------------------------------------------------------------------
-    public function obtenerTodos(int $limite): array
+    // Ejemplo si recibe un array:
+    public function obtenerTodos(int $limite = 100): array
     {
+        $limite = $parametros['limite'] ?? 10;
         if ($limite <= 0) {
             throw new InvalidArgumentException(
                 'El límite debe ser mayor que cero.'
