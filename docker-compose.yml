@@ -18,7 +18,7 @@ services:
       MARIADB_USER: paradigmas
       MARIADB_PASSWORD: paradigmas123
     ports:
-      - "13428:3306"
+      - "13426:3306"
     volumes:
       - mariadbdata:/var/lib/mysql
       - ./db/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -38,7 +38,7 @@ services:
       POSTGRES_USER: paradigmas
       POSTGRES_PASSWORD: paradigmas123
     ports:
-      - "15564:5432"
+      - "15552:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -63,7 +63,7 @@ services:
       POSTGRES_USUARIO: paradigmas
       POSTGRES_CLAVE: paradigmas123
     ports:
-      - "8186:8086"
+      - "8122:8086"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -79,7 +79,7 @@ services:
     environment:
       URL_API: "http://api-gestion:8086"
     ports:
-      - "8184:8084"
+      - "8120:8084"
     depends_on:
       - api-gestion
 

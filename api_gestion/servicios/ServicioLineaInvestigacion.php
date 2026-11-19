@@ -44,7 +44,7 @@ class ServicioLineaInvestigacion implements IServicioLineaInvestigacion
     // -----------------------------------------------------------------------
     // obtenerTodos
     // -----------------------------------------------------------------------
-    public function obtenerTodos(int $limite): array
+    public function obtenerTodos(int $limite = 100): array
     {
         if ($limite <= 0) {
             throw new InvalidArgumentException(

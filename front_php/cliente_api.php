@@ -53,6 +53,14 @@ function mensajes_de_error(?array $respuesta): array
     
     return [$mensaje];
 }
+function diagnostico(): ?array
+{
+    $r = llamar_api('GET', '/');
+    if ($r === null || ($r['__codigo'] ?? 0) !== 200) {
+        return null;
+    }
+    return $r;
+}
 
 // =========================================================================
 // AUTENTICACIÓN (V3)
