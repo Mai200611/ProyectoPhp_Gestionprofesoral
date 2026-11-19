@@ -42,6 +42,15 @@
                     </ul>
                 </li>
             </ul>
+            
+            <!-- SECCIÓN DE USUARIO Y CERRAR SESIÓN -->
+            <div class="d-flex align-items-center ms-auto">
+                <span class="navbar-text me-3 text-light">
+                    Hola, <?= htmlspecialchars((string)($_SESSION['usuario'] ?? 'Usuario'), ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <a href="/logout" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
+            </div>
+            
         </div>
     </div>
 </nav>

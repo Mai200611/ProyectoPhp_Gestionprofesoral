@@ -1,15 +1,7 @@
 # docker-compose.yml — Versión 3: el mismo sistema contra dos motores
-#
+# 
 # Cuatro servicios (más phpMyAdmin para inspeccionar MariaDB) y UNA sola
 # imagen de API que escoge el motor al arrancar según DB_MOTOR.
-#
-# Cambiar de motor (sin reconstruir, solo recreando la API):
-#   $env:DB_MOTOR = "postgres"; docker compose up -d --no-deps --force-recreate api-gestion
-#   $env:DB_MOTOR = "mariadb";  docker compose up -d --no-deps --force-recreate api-gestion
-#
-# NOTA: algunos documentos del spec-kit escriben "MOTOR"; el nombre real
-# que usa el compose, el quickstart y las tareas es "DB_MOTOR".
-# El código lee esta variable al arrancar (no en cada petición).
 
 name: mi_v3_motores
 
@@ -63,10 +55,7 @@ services:
     container_name: mi_v3_api
     restart: unless-stopped
     environment:
-      # El motor se lee al arrancar. Valor desconocido ⇒ MariaDB (RF1).
       DB_MOTOR: ${DB_MOTOR:-mariadb}
-      # Los DOS juegos de conexión viajan siempre; el ensamblador usa
-      # el que corresponde a motorActivo(). Solo cambia el DSN (RNF5).
       MARIADB_DSN: "mysql:host=mariadb;port=3306;dbname=bdgestion_mariadb_local;charset=utf8mb4"
       MARIADB_USUARIO: paradigmas
       MARIADB_CLAVE: paradigmas123
